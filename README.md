@@ -1,36 +1,216 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🤖 ZapBot - Dashboard de Leads
 
-## Getting Started
+Um sistema completo de gerenciamento de leads com interface Kanban intuitiva, desenvolvido com Next.js 14 e TypeScript.
 
-First, run the development server:
+## ✨ Funcionalidades
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- 📊 **Dashboard Kanban**: Visualização e gerenciamento de leads em colunas personalizáveis
+- 🔄 **Sincronização Dinâmica**: Atualizações automáticas entre componentes
+- 📝 **Formulário de Leads**: Cadastro e edição de leads com validação
+- 🎨 **Interface Moderna**: Design responsivo e intuitivo
+- 🐳 **Docker Ready**: Containerização completa para fácil deploy
+- 🔧 **TypeScript**: Tipagem forte para maior confiabilidade
+
+## 🚀 Instalação Rápida
+
+### Pré-requisitos
+
+- [Docker](https://docs.docker.com/get-docker/) (recomendado)
+- [Docker Compose](https://docs.docker.com/compose/install/)
+- Ou [Node.js 18+](https://nodejs.org/) para instalação manual
+
+### 🐳 Instalação com Docker (Recomendado)
+
+#### Windows
+```powershell
+# Clone o repositório
+git clone https://github.com/laudeirbcarvalho/zapbot.git
+cd zapbot
+
+# Execute o script de instalação
+.\install.ps1
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+#### Linux/macOS
+```bash
+# Clone o repositório
+git clone https://github.com/laudeirbcarvalho/zapbot.git
+cd zapbot
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+# Torne o script executável e execute
+chmod +x install.sh
+./install.sh
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+#### Instalação Manual com Docker
+```bash
+# Clone o repositório
+git clone https://github.com/laudeirbcarvalho/zapbot.git
+cd zapbot
 
-## Learn More
+# Copie o arquivo de ambiente
+cp .env.example .env
 
-To learn more about Next.js, take a look at the following resources:
+# Build e execute
+docker-compose up -d
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 📦 Instalação Manual (sem Docker)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+# Clone o repositório
+git clone https://github.com/laudeirbcarvalho/zapbot.git
+cd zapbot
 
-## Deploy on Vercel
+# Instale as dependências
+npm install
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# Configure o ambiente
+cp .env.example .env
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# Execute em modo de desenvolvimento
+npm run dev
+
+# Ou build para produção
+npm run build
+npm start
+```
+
+## 🔧 Configuração
+
+### Variáveis de Ambiente
+
+Crie um arquivo `.env` na raiz do projeto:
+
+```env
+# Configurações da aplicação
+NODE_ENV=production
+PORT=3000
+
+# Adicione suas configurações específicas aqui
+# DATABASE_URL=sua_url_do_banco
+# API_KEY=sua_chave_api
+```
+
+## 🎯 Como Usar
+
+1. **Acesse a aplicação**: http://localhost:3000
+2. **Dashboard Kanban**: Visualize e gerencie seus leads
+3. **Adicionar Leads**: Use o formulário para cadastrar novos leads
+4. **Gerenciar Colunas**: Crie, edite e organize suas colunas
+5. **Arrastar e Soltar**: Mova leads entre colunas facilmente
+
+## 🏗️ Estrutura do Projeto
+
+```
+zapbot/
+├── app/                    # Código da aplicação Next.js 14
+│   ├── api/               # Rotas da API
+│   │   ├── columns/       # Gerenciamento de colunas
+│   │   ├── leads/         # Gerenciamento de leads
+│   │   └── health/        # Health check
+│   ├── dashboard/         # Páginas do dashboard
+│   │   ├── kanban/        # Interface Kanban
+│   │   └── leads/         # Formulário de leads
+│   ├── hooks/             # Hooks personalizados
+│   └── components/        # Componentes reutilizáveis
+├── public/                # Arquivos estáticos
+├── docker-compose.yml     # Orquestração Docker
+├── Dockerfile            # Imagem de produção
+├── Dockerfile.dev        # Imagem de desenvolvimento
+└── install.sh/.ps1       # Scripts de instalação
+```
+
+## 🐳 Comandos Docker
+
+```bash
+# Iniciar aplicação
+docker-compose up -d
+
+# Parar aplicação
+docker-compose down
+
+# Ver logs
+docker-compose logs -f
+
+# Rebuild completo
+docker-compose build --no-cache
+
+# Status dos containers
+docker-compose ps
+
+# Modo desenvolvimento
+docker-compose --profile dev up -d
+```
+
+## 🛠️ Desenvolvimento
+
+### Executar em modo desenvolvimento
+```bash
+npm run dev
+```
+
+### Build para produção
+```bash
+npm run build
+npm start
+```
+
+### Linting e formatação
+```bash
+npm run lint
+npm run lint:fix
+```
+
+## 📊 Monitoramento
+
+- **Health Check**: http://localhost:3000/api/health
+- **Logs**: `docker-compose logs -f zapbot`
+
+## 🔄 Atualizações
+
+```bash
+# Puxar atualizações
+git pull origin main
+
+# Rebuild e restart
+docker-compose down
+docker-compose build --no-cache
+docker-compose up -d
+```
+
+## 🤝 Contribuição
+
+1. Fork o projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
+3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
+4. Push para a branch (`git push origin feature/AmazingFeature`)
+5. Abra um Pull Request
+
+## 📝 Licença
+
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+
+## 🆘 Suporte
+
+Se você encontrar algum problema:
+
+1. Verifique os [Issues](https://github.com/laudeirbcarvalho/zapbot/issues) existentes
+2. Crie um novo issue com detalhes do problema
+3. Inclua logs e informações do ambiente
+
+## 🚀 Deploy
+
+### Docker Hub
+```bash
+# Build e push para Docker Hub
+docker build -t seu-usuario/zapbot .
+docker push seu-usuario/zapbot
+```
+
+### Vercel/Netlify
+O projeto está pronto para deploy em plataformas como Vercel ou Netlify. Configure as variáveis de ambiente na plataforma escolhida.
+
+---
+
+**Desenvolvido com ❤️ usando Next.js 14, TypeScript e Docker**

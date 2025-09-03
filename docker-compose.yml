@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  zapbot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: zapbot-app
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    volumes:
+      # Volume para persistir dados se necessário
+      - zapbot_data:/app/data
+    restart: unless-stopped
+    networks:
+      - zapbot-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Serviço opcional para desenvolvimento
+  zapbot-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: zapbot-dev
+    ports:
+      - "3001:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    restart: unless-stopped
+    networks:
+      - zapbot-network
+    profiles:
+      - dev
+
+volumes:
+  zapbot_data:
+    driver: local
+
+networks:
+  zapbot-network:
+    driver: bridge
