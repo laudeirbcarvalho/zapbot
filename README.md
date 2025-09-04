@@ -78,19 +78,88 @@ npm start
 
 ## 🔧 Configuração
 
-### Variáveis de Ambiente
+### Arquivo .env
 
-Crie um arquivo `.env` na raiz do projeto:
+O arquivo `.env` na raiz do projeto contém todas as configurações necessárias. **Este é o único arquivo que precisa ser configurado para o funcionamento completo da aplicação.**
 
 ```env
-# Configurações da aplicação
-NODE_ENV=production
-PORT=3000
+# ===========================================
+# CONFIGURAÇÕES DO BANCO DE DADOS MYSQL
+# ===========================================
+# URL completa de conexão com o banco MySQL
+DATABASE_URL="mysql://usuario:senha@host:porta/nome_do_banco"
 
-# Adicione suas configurações específicas aqui
-# DATABASE_URL=sua_url_do_banco
-# API_KEY=sua_chave_api
+# Configurações individuais do banco (usadas como backup)
+DB_HOST="seu_host_mysql"          # Ex: localhost, 31.97.83.151
+DB_PORT="3306"                     # Porta padrão do MySQL
+DB_USER="seu_usuario"             # Usuário do banco
+DB_PASS="sua_senha"               # Senha do banco
+DB_NAME="nome_do_banco"           # Nome do banco de dados
+
+# ===========================================
+# CONFIGURAÇÕES DE AUTENTICAÇÃO (NextAuth)
+# ===========================================
+NEXTAUTH_URL="http://localhost:3000"  # URL da aplicação
+NEXTAUTH_SECRET="sua_chave_secreta"   # Chave secreta para JWT
+
+# ===========================================
+# CONFIGURAÇÕES DE EMAIL (Recuperação de Senha)
+# ===========================================
+# Configurações do servidor SMTP
+EMAIL_SERVER_HOST="smtp.gmail.com"    # Servidor SMTP
+EMAIL_SERVER_PORT="587"               # Porta SMTP (587 para TLS)
+EMAIL_SERVER_USER="seu_email@gmail.com"  # Email remetente
+EMAIL_SERVER_PASSWORD="sua_senha_app"    # Senha do app (Gmail)
+EMAIL_FROM="seu_email@gmail.com"         # Email de origem
+
+# ===========================================
+# CONFIGURAÇÕES DA APLICAÇÃO
+# ===========================================
+NODE_ENV="production"
+PORT="3000"
 ```
+
+### 📧 Configuração de Email (Gmail)
+
+Para configurar o envio de emails de recuperação de senha:
+
+1. **Ative a verificação em 2 etapas** na sua conta Google
+2. **Gere uma senha de app**:
+   - Acesse: https://myaccount.google.com/apppasswords
+   - Selecione "Email" e "Outro (nome personalizado)"
+   - Digite "ZapBot" e clique em "Gerar"
+   - Use a senha gerada em `EMAIL_SERVER_PASSWORD`
+
+3. **Configure as variáveis no .env**:
+```env
+EMAIL_SERVER_HOST="smtp.gmail.com"
+EMAIL_SERVER_PORT="587"
+EMAIL_SERVER_USER="seuemail@gmail.com"
+EMAIL_SERVER_PASSWORD="abcd efgh ijkl mnop"  # Senha de app de 16 dígitos
+EMAIL_FROM="seuemail@gmail.com"
+```
+
+### 🗄️ Configuração do Banco MySQL
+
+**Exemplo de configuração completa:**
+
+```env
+# Para banco local
+DATABASE_URL="mysql://root:minhasenha@localhost:3306/zapbot"
+DB_HOST="localhost"
+DB_USER="root"
+DB_PASS="minhasenha"
+DB_NAME="zapbot"
+
+# Para banco remoto
+DATABASE_URL="mysql://usuario:senha123@31.97.83.151:3306/meubanc"
+DB_HOST="31.97.83.151"
+DB_USER="usuario"
+DB_PASS="senha123"
+DB_NAME="meubanco"
+```
+
+**⚠️ Importante:** Após alterar as configurações do banco de dados, reinicie a aplicação para que as mudanças tenham efeito.
 
 ## 🎯 Como Usar
 
