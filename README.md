@@ -270,6 +270,31 @@ Se você encontrar algum problema:
 
 ## 🚀 Deploy
 
+### Coolify (Recomendado)
+
+O ZapBot está otimizado para deploy no Coolify com configuração automática:
+
+```bash
+# Executar script de preparação
+chmod +x deploy-coolify.sh
+./deploy-coolify.sh
+```
+
+**Arquivos de configuração incluídos:**
+- `COOLIFY_DEPLOY_GUIDE.md` - Guia completo de instalação
+- `coolify.json` - Configuração automática do Coolify
+- `.env.coolify` - Exemplo de variáveis de ambiente
+- `deploy-coolify.sh` - Script de preparação automática
+
+**Passos rápidos:**
+1. Configure as variáveis de ambiente (veja `.env.coolify`)
+2. Crie nova aplicação no Coolify
+3. Conecte o repositório Git
+4. Configure as variáveis no painel
+5. Deploy automático!
+
+📖 **[Guia Completo de Deploy no Coolify](./COOLIFY_DEPLOY_GUIDE.md)**
+
 ### Docker Hub
 ```bash
 # Build e push para Docker Hub
