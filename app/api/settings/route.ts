@@ -4,8 +4,8 @@ import { authOptions } from '@/app/lib/auth';
 
 // Simulação de configurações (em um cenário real, usaríamos o Prisma)
 let settings = {
-  nomeEmpresa: "ZapBot Marketing",
-  email: "contato@zapbot.com",
+  nomeEmpresa: "CRM Marketing",
+    email: "contato@crm.com",
   telefone: "(11) 99999-0000",
   endereco: "Av. Paulista, 1000 - São Paulo, SP",
   webhookUrl: "https://zapbot.com/api/webhook",

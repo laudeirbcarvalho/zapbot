@@ -1,6 +1,6 @@
-# 🤖 ZapBot - Dashboard de Leads
+# 🤖 CRM - Sistema de Gestão de Relacionamento com Cliente
 
-Um sistema completo de gerenciamento de leads com interface Kanban intuitiva, desenvolvido com Next.js 14 e TypeScript.
+Um sistema completo de gestão de relacionamento com cliente com interface Kanban intuitiva, desenvolvido com Next.js 14 e TypeScript.
 
 ## ✨ Funcionalidades
 

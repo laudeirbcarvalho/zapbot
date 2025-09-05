@@ -13,6 +13,8 @@ interface KanbanColumnProps {
   onAddCard: () => void;
   onUpdateTitle: (title: string) => void;
   onDelete: () => void;
+  isDropTarget?: boolean;
+  isDragging?: boolean;
 }
 
 export default function KanbanColumn({
@@ -23,6 +25,8 @@ export default function KanbanColumn({
   onAddCard,
   onUpdateTitle,
   onDelete,
+  isDropTarget = false,
+  isDragging = false,
 }: KanbanColumnProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [columnTitle, setColumnTitle] = useState(title);
@@ -85,11 +89,16 @@ export default function KanbanColumn({
       ref={setNodeRef}
       style={style}
       className={`flex flex-col bg-gray-800 rounded-lg shadow-lg min-w-[300px] max-w-[300px] h-full transition-all duration-200 ${
+        isDropTarget ? 'ring-4 ring-green-400 bg-green-900/20 scale-105 shadow-2xl' :
         isOver ? 'ring-2 ring-blue-400 bg-gray-750' : ''
+      } ${
+        isDragging && !isDropTarget ? 'opacity-70' : ''
       }`}
     >
       <div
-        className="p-3 font-semibold text-white bg-gray-700 rounded-t-lg flex justify-between items-center cursor-grab"
+        className={`p-3 font-semibold text-white rounded-t-lg flex justify-between items-center cursor-grab transition-all duration-200 ${
+          isDropTarget ? 'bg-green-600 animate-pulse' : 'bg-gray-700'
+        }`}
         {...attributes}
         {...listeners}
       >

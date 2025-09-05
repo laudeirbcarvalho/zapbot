@@ -8,8 +8,8 @@ import { useState, useEffect } from "react";
 export default function ConfiguracoesPage() {
   const { data: session, status } = useSession();
   const [formData, setFormData] = useState({
-    nomeEmpresa: "ZapBot Marketing",
-    email: "contato@zapbot.com",
+    nomeEmpresa: "CRM Marketing",
+    email: "contato@crm.com",
     telefone: "(11) 99999-0000",
     endereco: "Av. Paulista, 1000 - São Paulo, SP",
     webhookUrl: "https://zapbot.com/api/webhook",

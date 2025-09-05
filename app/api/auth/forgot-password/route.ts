@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
-
-const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
   try {
@@ -114,13 +112,13 @@ export async function POST(request: Request) {
 
     // Enviar email
     const mailOptions = {
-      from: process.env.EMAIL_FROM || 'noreply@zapbot.com',
+      from: process.env.EMAIL_FROM || 'noreply@crm.com',
       to: email,
-      subject: 'Recuperação de Senha - ZapBot',
+      subject: 'Recuperação de Senha - CRM',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #333;">Recuperação de Senha</h2>
-          <p>Você solicitou a recuperação de senha para sua conta no ZapBot.</p>
+          <p>Você solicitou a recuperação de senha para sua conta no CRM.</p>
           <p>Clique no link abaixo para redefinir sua senha:</p>
           <a href="${resetUrl}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Redefinir Senha</a>
           <p style="margin-top: 20px; color: #666;">Este link expira em 1 hora.</p>

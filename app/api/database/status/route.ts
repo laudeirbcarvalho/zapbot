@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import mysql from 'mysql2/promise';
 
 // Configurações do banco de dados
@@ -28,7 +28,7 @@ interface ConnectionResult {
 async function testPrismaConnection(): Promise<ConnectionResult> {
   console.log('🔍 [DATABASE STATUS] Testando conexão via Prisma...');
   
-  const prisma = new PrismaClient();
+  // Usando prisma centralizado
   
   try {
     await prisma.$connect();

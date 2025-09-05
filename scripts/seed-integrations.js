@@ -14,66 +14,16 @@ async function seedIntegrations() {
       return;
     }
     
-    // Criar integrações padrão
+    // Criar integrações padrão - apenas Evolution API
     const integrations = [
-      {
-        id: "n8n",
-        name: "n8n",
-        type: "automation",
-        config: JSON.stringify({
-          status: "disconnected",
-          icon: "🔄",
-          description: "Plataforma de automação de workflows"
-        })
-      },
-      {
-        id: "google",
-        name: "Google",
-        type: "auth",
-        config: JSON.stringify({
-          status: "disconnected",
-          icon: "🔍",
-          description: "Integração com serviços Google"
-        })
-      },
       {
         id: "evolution",
         name: "Evolution API",
-        type: "messaging",
+        type: "evolution-api",
         config: JSON.stringify({
           status: "disconnected",
           icon: "💬",
           description: "API para WhatsApp Business"
-        })
-      },
-      {
-        id: "chatwoot",
-        name: "Chatwoot",
-        type: "support",
-        config: JSON.stringify({
-          status: "disconnected",
-          icon: "🎯",
-          description: "Plataforma de atendimento ao cliente"
-        })
-      },
-      {
-        id: "telegram",
-        name: "Telegram",
-        type: "messaging",
-        config: JSON.stringify({
-          status: "disconnected",
-          icon: "📱",
-          description: "Bot do Telegram"
-        })
-      },
-      {
-        id: "facebook",
-        name: "Facebook",
-        type: "social",
-        config: JSON.stringify({
-          status: "disconnected",
-          icon: "📘",
-          description: "Integração com Facebook e Instagram"
         })
       }
     ];

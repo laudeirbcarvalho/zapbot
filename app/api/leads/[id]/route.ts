@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 // GET - Buscar um lead específico
 export async function GET(
@@ -43,7 +41,19 @@ export async function PUT(
     const id = params.id;
     const body = await request.json();
     
+    console.log(`🔄 API: Recebendo requisição PUT para lead ${id}`);
+    console.log(`📋 API: Dados recebidos:`, JSON.stringify(body, null, 2));
+    
     const { name, email, phone, source, status, columnId, notes, position } = body;
+    
+    // Buscar estado atual antes da atualização
+    const currentLead = await prisma.lead.findUnique({ where: { id } });
+    console.log(`📋 API: Estado ANTES da atualização:`, {
+      id: currentLead?.id,
+      columnId: currentLead?.columnId,
+      status: currentLead?.status,
+      position: currentLead?.position
+    });
     
     const lead = await prisma.lead.update({
       where: {
@@ -58,7 +68,17 @@ export async function PUT(
         columnId,
         notes,
         position,
+        updatedAt: new Date() // Forçar atualização do timestamp
       },
+    });
+    
+    console.log(`✅ API: Lead ${id} atualizado com sucesso!`);
+    console.log(`📋 API: Estado DEPOIS da atualização:`, {
+      id: lead.id,
+      columnId: lead.columnId,
+      status: lead.status,
+      position: lead.position,
+      updatedAt: lead.updatedAt
     });
     
     return NextResponse.json(lead);

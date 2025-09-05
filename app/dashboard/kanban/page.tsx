@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { DndContext, DragEndEvent, DragOverEvent, DragStartEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragOverEvent, DragStartEvent, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, arrayMove } from '@dnd-kit/sortable';
 import Header from '@/app/components/Header';
 import KanbanColumn from '@/app/components/KanbanColumn';
 import KanbanCard from '@/app/components/KanbanCard';
 import AddColumnButton from '@/app/components/AddColumnButton';
 import { useColumnSync } from '@/app/hooks/useColumnSync';
+import { eventEmitter, EVENTS, useStorageEvents } from '@/lib/events';
 
 interface Lead {
   id: string;
@@ -34,76 +35,121 @@ interface Column {
 
 export default function KanbanPage() {
   const { data: session, status } = useSession();
-  const [columns, setColumns] = useState<Column[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [columns, setColumns] = useState<Column[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dragLoading, setDragLoading] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeLead, setActiveLead] = useState<Lead | null>(null);
+  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const { notifyColumnChange } = useColumnSync();
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8,
+        distance: 3,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
       },
     })
   );
 
   // Log movido para depois do carregamento dos dados
 
-  useEffect(() => {
-    // Carregar colunas e leads do banco de dados
-    async function fetchData() {
-      try {
-        console.log('🔄 Iniciando carregamento de dados...');
-        setLoading(true);
-        
-        // Buscar colunas
-        console.log('📊 Buscando colunas...');
-        const columnsResponse = await fetch('/api/columns');
-        console.log('📊 Response colunas:', columnsResponse.status, columnsResponse.ok);
-        if (!columnsResponse.ok) {
-          throw new Error('Falha ao buscar colunas');
-        }
-        const columnsData = await columnsResponse.json();
-        console.log('📊 Colunas carregadas:', columnsData.length, columnsData);
-        const sortedColumns = columnsData.sort((a: Column, b: Column) => a.position - b.position);
-        setColumns(sortedColumns);
-        // Notificar sobre as colunas carregadas
-        notifyColumnChange(sortedColumns);
-        
-        // Buscar leads
-        console.log('👥 Buscando leads...');
-        const leadsResponse = await fetch('/api/leads');
-        console.log('👥 Response leads:', leadsResponse.status, leadsResponse.ok);
-        if (!leadsResponse.ok) {
-          throw new Error('Falha ao buscar leads');
-        }
-        const leadsData = await leadsResponse.json();
-        console.log('👥 Leads carregados:', leadsData.length, leadsData);
-        setLeads(leadsData);
-        
-        console.log('✅ Dados carregados com sucesso!');
-      } catch (error) {
-        console.error('❌ Erro ao carregar dados:', error);
-        // Se não houver dados, criar colunas padrão com os status do formulário
-        if (columns.length === 0) {
-          const defaultColumns = [
-            { id: "novo", title: "Novo", position: 0 },
-            { id: "em-contato", title: "Em contato", position: 1 },
-            { id: "qualificado", title: "Qualificado", position: 2 },
-            { id: "negociacao", title: "Negociação", position: 3 },
-            { id: "fechado", title: "Fechado", position: 4 },
-          ];
-          setColumns(defaultColumns);
-          console.log('🔧 Colunas padrão criadas');
-        }
-      } finally {
-        setLoading(false);
-        console.log('🏁 Carregamento finalizado');
+  // Carregar colunas e leads do banco de dados
+  const fetchData = async () => {
+    try {
+      console.log('🔄 Iniciando carregamento de dados...');
+      setLoading(true);
+      
+      // Buscar colunas
+      console.log('📊 Buscando colunas...');
+      const columnsResponse = await fetch('/api/columns');
+      console.log('📊 Response colunas:', columnsResponse.status, columnsResponse.ok);
+      if (!columnsResponse.ok) {
+        throw new Error('Falha ao buscar colunas');
       }
+      const columnsData = await columnsResponse.json();
+      console.log('📊 Colunas carregadas:', columnsData.length, columnsData);
+      const sortedColumns = columnsData.sort((a: Column, b: Column) => a.position - b.position);
+      setColumns(sortedColumns);
+      // Notificar sobre as colunas carregadas
+      notifyColumnChange(sortedColumns);
+      
+      // Buscar leads
+      console.log('👥 Buscando leads...');
+      const leadsResponse = await fetch('/api/leads');
+      console.log('👥 Response leads:', leadsResponse.status, leadsResponse.ok);
+      if (!leadsResponse.ok) {
+        throw new Error('Falha ao buscar leads');
+      }
+      const leadsData = await leadsResponse.json();
+      console.log('👥 Leads carregados:', leadsData.length, leadsData);
+      console.log('📥 Dados carregados da API:', leadsData);
+      setLeads(leadsData);
+      
+      console.log('✅ Dados carregados com sucesso!');
+    } catch (error) {
+      console.error('❌ Erro ao carregar dados:', error);
+      // Se não houver dados, criar colunas padrão com os status do formulário
+      if (columns.length === 0) {
+        const defaultColumns = [
+          { id: "novo", title: "Novo", position: 0 },
+          { id: "em-contato", title: "Em contato", position: 1 },
+          { id: "qualificado", title: "Qualificado", position: 2 },
+          { id: "negociacao", title: "Negociação", position: 3 },
+          { id: "fechado", title: "Fechado", position: 4 },
+        ];
+        setColumns(defaultColumns);
+        console.log('🔧 Colunas padrão criadas');
+      }
+    } finally {
+      setLoading(false);
+      console.log('🏁 Carregamento finalizado');
     }
-    
+  };
+
+  useEffect(() => {
     fetchData();
+    
+    // Configurar listeners para eventos de leads
+    const handleLeadCreated = (lead: Lead) => {
+      console.log('🆕 Lead criado, atualizando kanban:', lead);
+      setLeads(prevLeads => [...prevLeads, lead]);
+    };
+    
+    const handleLeadUpdated = (lead: Lead) => {
+      console.log('✏️ Lead atualizado, atualizando kanban:', lead);
+      setLeads(prevLeads => 
+        prevLeads.map(l => l.id === lead.id ? lead : l)
+      );
+    };
+    
+    const handleLeadDeleted = ({ id }: { id: string }) => {
+      console.log('🗑️ Lead deletado, removendo do kanban:', id);
+      setLeads(prevLeads => prevLeads.filter(l => l.id !== id));
+    };
+    
+    // Registrar listeners
+    eventEmitter.on(EVENTS.LEAD_CREATED, handleLeadCreated);
+    eventEmitter.on(EVENTS.LEAD_UPDATED, handleLeadUpdated);
+    eventEmitter.on(EVENTS.LEAD_DELETED, handleLeadDeleted);
+    
+    // Configurar listener para eventos de storage
+    const cleanup = useStorageEvents();
+    
+    // Cleanup
+    return () => {
+      eventEmitter.off(EVENTS.LEAD_CREATED, handleLeadCreated);
+      eventEmitter.off(EVENTS.LEAD_UPDATED, handleLeadUpdated);
+      eventEmitter.off(EVENTS.LEAD_DELETED, handleLeadDeleted);
+      if (cleanup) cleanup();
+    };
   }, []);
 
   // Log após carregamento dos dados
@@ -117,17 +163,29 @@ export default function KanbanPage() {
     }
   }, [columns, leads]);
 
+
+
   function handleDragStart(event: DragStartEvent) {
     const { active } = event;
-    console.log('🚀 Drag Start:', active.id, 'Type:', typeof active.id);
-    console.log('🚀 Active data:', active.data.current);
+    console.log('🎯 Iniciando drag:', active.id);
     setActiveId(String(active.id));
+    
+    if (active.id.toString().startsWith("lead-")) {
+      const leadId = active.id.toString().replace('lead-', '');
+      const lead = leads.find(l => l.id === leadId);
+      setActiveLead(lead || null);
+      // Mostrar feedback visual de início do drag
+      setSaveMessage(`🎯 Arrastando "${lead?.name || 'Lead'}"... Solte em uma coluna para mover`);
+    }
   }
 
   function handleDragOver(event: DragOverEvent) {
     const { active, over } = event;
     
-    if (!over) return;
+    if (!over) {
+      setDragOverColumn(null);
+      return;
+    }
     
     const activeId = String(active.id);
     const overId = String(over.id);
@@ -147,6 +205,11 @@ export default function KanbanPage() {
     const columnIds = columns.map(col => col.id);
     if (columnIds.includes(overId)) {
       targetColumnId = overId;
+      setDragOverColumn(overId);
+      const targetColumn = columns.find(col => col.id === overId);
+      if (targetColumn) {
+        setSaveMessage(`🎯 Movendo "${activeLead.name}" para "${targetColumn.title}"`);
+      }
     }
     // Se arrastou sobre outro lead
     else if (overId.startsWith("lead-")) {
@@ -154,6 +217,11 @@ export default function KanbanPage() {
       const overLead = leads.find(lead => lead.id === overLeadId);
       if (overLead) {
         targetColumnId = overLead.columnId;
+        setDragOverColumn(overLead.columnId);
+        const targetColumn = columns.find(col => col.id === overLead.columnId);
+        if (targetColumn) {
+          setSaveMessage(`🎯 Movendo "${activeLead.name}" para "${targetColumn.title}"`);
+        }
       }
     }
     
@@ -175,6 +243,8 @@ export default function KanbanPage() {
     
     // Sempre limpa o activeId no final
     setActiveId(null);
+    setActiveLead(null);
+    setDragOverColumn(null);
     
     if (!over) {
       console.log('❌ Drag cancelado - sem destino');
@@ -183,6 +253,8 @@ export default function KanbanPage() {
     
     const activeId = String(active.id);
     const overId = String(over.id);
+    
+    console.log('🔍 ActiveId:', activeId, 'OverId:', overId);
     
     // Se soltou no mesmo lugar, não faz nada
     if (activeId === overId) {
@@ -205,6 +277,7 @@ export default function KanbanPage() {
     
     // Processar movimento de leads
     if (activeId.startsWith("lead-")) {
+      console.log('🎯 Processando movimento de lead');
       const leadId = activeId.replace('lead-', '');
       const activeLead = leads.find(lead => lead.id === leadId);
       if (!activeLead) {
@@ -212,30 +285,52 @@ export default function KanbanPage() {
         return;
       }
       
+      console.log('📋 Lead ativo:', activeLead.name, 'Coluna atual:', activeLead.columnId);
+      console.log('🔍 Lead completo:', JSON.stringify(activeLead, null, 2));
       let targetColumnId = activeLead.columnId;
       
       // Determinar coluna de destino
       const columnIds = columns.map(col => col.id);
+      console.log('🏛️ IDs das colunas:', columnIds);
+      console.log('🎯 OverId:', overId, 'É coluna?', columnIds.includes(overId));
+      
       if (columnIds.includes(overId)) {
         targetColumnId = overId;
+        console.log('✅ Movendo para coluna:', targetColumnId);
       } else if (overId.startsWith("lead-")) {
         const overLeadId = overId.replace('lead-', '');
         const overLead = leads.find(lead => lead.id === overLeadId);
         if (overLead) {
           targetColumnId = overLead.columnId;
+          console.log('✅ Movendo para coluna do lead:', targetColumnId);
         }
       }
       
-      // Se mudou de coluna, atualizar
-      if (targetColumnId !== activeLead.columnId) {
+      console.log('🔄 Coluna origem:', activeLead.columnId, '-> Coluna destino:', targetColumnId);
+      console.log('🔍 Comparação:', `"${activeLead.columnId}" !== "${targetColumnId}"`, '=', activeLead.columnId !== targetColumnId);
+      console.log('🔍 Tipos:', typeof activeLead.columnId, 'vs', typeof targetColumnId);
+      
+      // FORÇAR atualização sempre que houver drop em coluna diferente
+      const shouldUpdate = targetColumnId !== activeLead.columnId || columnIds.includes(overId);
+      console.log('🎯 Deve atualizar?', shouldUpdate, '(targetColumnId !== activeLead.columnId:', targetColumnId !== activeLead.columnId, '|| columnIds.includes(overId):', columnIds.includes(overId), ')');
+      
+      // Se mudou de coluna OU foi dropado em uma coluna, atualizar
+      if (shouldUpdate && columnIds.includes(overId)) {
+        console.log('💾 CONDIÇÃO ATENDIDA - Salvando mudança de coluna!');
         console.log('💾 Salvando mudança de coluna:', activeLead.columnId, '->', targetColumnId);
         
-        // Atualizar estado local imediatamente
-        setLeads(prevLeads => prevLeads.map(lead => 
-          lead.id === leadId 
-            ? { ...lead, columnId: targetColumnId, status: getStatusFromColumnId(targetColumnId) }
-            : lead
-        ));
+        // Obter nomes das colunas para mostrar na mensagem
+        const sourceColumn = columns.find(col => col.id === activeLead.columnId);
+        const targetColumn = columns.find(col => col.id === targetColumnId);
+        
+        // Mostrar mensagem detalhada imediatamente quando o drag acontece
+        setSaveMessage(`Movendo "${activeLead.name}" para "${targetColumn?.title || 'Coluna'}"`);
+        
+        // Não atualizar estado local imediatamente para evitar conflitos
+        // Os dados serão recarregados após a confirmação do servidor
+        
+        // Ativar loading durante a operação
+        setDragLoading(true);
         
         // Atualizar no banco de dados
         fetch(`/api/leads/${leadId}`, {
@@ -254,15 +349,27 @@ export default function KanbanPage() {
           })
           .then(() => {
             console.log('✅ Lead movido com sucesso');
+            console.log('🔄 Recarregando dados para sincronização...');
+            
+            // Mostrar mensagem de sucesso detalhada
+            setSaveMessage(`Salvo com sucesso`);
+            
+            // Recarregar dados para garantir sincronização
+            fetchData().then(() => {
+              // Manter a mensagem por mais tempo após recarregar
+              setTimeout(() => setSaveMessage(''), 3000);
+            });
           })
           .catch(error => {
             console.error('❌ Erro ao mover lead:', error);
-            // Reverter mudança local em caso de erro
-            setLeads(prevLeads => prevLeads.map(lead => 
-              lead.id === leadId 
-                ? { ...lead, columnId: activeLead.columnId, status: activeLead.status }
-                : lead
-            ));
+            
+            // Mostrar mensagem de erro detalhada
+            setSaveMessage(`Erro ao salvar`);
+            setTimeout(() => setSaveMessage(''), 3000);
+          })
+          .finally(() => {
+            // Desativar loading após operação
+            setDragLoading(false);
           });
       }
       // Se é reordenação dentro da mesma coluna
@@ -292,19 +399,25 @@ export default function KanbanPage() {
             setLeads(updatedLeads);
             
             // Atualizar posições no banco de dados
+            console.log('💾 Atualizando posições no banco:', reorderedLeads.map(l => ({ id: l.id, name: l.name, position: reorderedLeads.findIndex(rl => rl.id === l.id) })));
+            
             reorderedLeads.forEach((lead, index) => {
-              if (lead.position !== index) {
-                fetch(`/api/leads/${lead.id}`, {
-                  method: 'PUT',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({ position: index }),
-                })
-                .catch(error => {
-                  console.error('❌ Erro ao atualizar posição:', error);
-                });
-              }
+              console.log(`🔄 Atualizando lead ${lead.name} para posição ${index}`);
+              fetch(`/api/leads/${lead.id}`, {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ position: index }),
+              })
+              .then(response => {
+                if (!response.ok) throw new Error(`Falha ao atualizar posição do lead ${lead.name}`);
+                console.log(`✅ Posição do lead ${lead.name} atualizada para ${index}`);
+                return response.json();
+              })
+              .catch(error => {
+                console.error(`❌ Erro ao atualizar posição do lead ${lead.name}:`, error);
+              });
             });
           }
         }
@@ -312,16 +425,22 @@ export default function KanbanPage() {
     }
   }
   
-  // Função auxiliar para mapear coluna para status
+  // Função auxiliar para mapear coluna para status baseado no título
   function getStatusFromColumnId(columnId: string): string {
-    const statusMap: { [key: string]: string } = {
-      'novo': 'novo',
-      'em-contato': 'em-contato',
-      'qualificado': 'qualificado',
-      'negociacao': 'negociacao',
-      'fechado': 'fechado'
-    };
-    return statusMap[columnId] || 'novo';
+    const column = columns.find(col => col.id === columnId);
+    if (!column) return 'novo';
+    
+    const titleLower = column.title.toLowerCase();
+    
+    // Mapear títulos de coluna para status
+    if (titleLower.includes('novo') || titleLower.includes('lead')) return 'novo';
+    if (titleLower.includes('contato') || titleLower.includes('em contato')) return 'em-contato';
+    if (titleLower.includes('qualificado') || titleLower.includes('interessado')) return 'qualificado';
+    if (titleLower.includes('negociação') || titleLower.includes('negociacao') || titleLower.includes('proposta')) return 'negociacao';
+    if (titleLower.includes('fechado') || titleLower.includes('ganho') || titleLower.includes('vendido')) return 'fechado';
+    
+    // Se não encontrar correspondência, usar o título como status
+    return titleLower.replace(/\s+/g, '-');
   }
 
   function addColumn() {
@@ -358,7 +477,7 @@ export default function KanbanPage() {
     const newLead: Lead = {
       id: `lead-${Date.now()}`,
       name: "Novo Lead",
-      status: "novo",
+      status: getStatusFromColumnId(columnId),
       columnId,
       position: leads.filter(lead => lead.columnId === columnId).length,
     };
@@ -493,6 +612,24 @@ export default function KanbanPage() {
     <>
       <Header title="Kanban de Leads" />
       
+      {/* Mensagem de status do drag and drop */}
+       {saveMessage && (
+         <div className={`fixed top-4 right-4 text-white px-8 py-4 rounded-xl shadow-2xl z-50 font-bold text-xl border-2 max-w-md ${
+           saveMessage.includes('Salvo com sucesso') ? 'bg-green-600 border-green-400 animate-bounce' :
+           saveMessage.includes('Erro ao salvar') ? 'bg-red-600 border-red-400 animate-pulse' :
+           'bg-blue-600 border-blue-400 animate-pulse'
+         }`}>
+           <div className="flex items-center gap-3">
+             <div className={`w-4 h-4 rounded-full ${
+               saveMessage.includes('Salvo com sucesso') ? 'bg-green-300 animate-ping' :
+               saveMessage.includes('Erro ao salvar') ? 'bg-red-300 animate-ping' :
+               'bg-blue-300 animate-spin'
+             }`}></div>
+             <div className="text-sm leading-tight">{saveMessage}</div>
+           </div>
+         </div>
+       )}
+      
       <div className="mt-6">
         <DndContext
           sensors={sensors}
@@ -503,7 +640,9 @@ export default function KanbanPage() {
           <div className="flex space-x-4 overflow-x-auto pb-4 h-[calc(100vh-160px)]">
             <SortableContext items={columns.map(col => col.id)}>
               {columns.map(column => {
-                const columnLeads = leads.filter(lead => lead.columnId === column.id);
+                const columnLeads = leads
+                  .filter(lead => lead.columnId === column.id)
+                  .sort((a, b) => (a.position || 0) - (b.position || 0));
                 return (
                   <KanbanColumn
                     key={column.id}
@@ -513,6 +652,8 @@ export default function KanbanPage() {
                     onAddCard={() => addLead(column.id)}
                     onUpdateTitle={(title) => updateColumn(column.id, title)}
                     onDelete={() => deleteColumn(column.id)}
+                    isDropTarget={dragOverColumn === column.id}
+                    isDragging={activeLead !== null}
                   >
                     {columnLeads.map(lead => (
                       <KanbanCard

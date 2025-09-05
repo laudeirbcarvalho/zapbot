@@ -18,7 +18,7 @@ export default function Sidebar() {
   return (
     <div className="flex flex-col h-full bg-gray-900 text-white w-64 p-4">
       <div className="flex items-center justify-center py-4">
-        <h1 className="text-2xl font-bold">ZapBot</h1>
+        <h1 className="text-2xl font-bold">CRM</h1>
       </div>
       
       <div className="mt-8 flex-1">

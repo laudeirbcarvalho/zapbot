@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 // GET - Listar todos os leads
 export async function GET() {
   try {
     const leads = await prisma.lead.findMany({
-      orderBy: {
-        createdAt: 'desc',
-      },
+      orderBy: [
+        { columnId: 'asc' },
+        { position: 'asc' },
+        { createdAt: 'desc' }
+      ],
     });
     
     return NextResponse.json(leads);
@@ -27,13 +27,22 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     
-    const { name, email, phone, source, status, columnId, notes } = body;
+    const { name, email, phone, source, status, columnId, notes, position } = body;
     
     if (!name) {
       return NextResponse.json(
         { error: "Nome é obrigatório" },
         { status: 400 }
       );
+    }
+    
+    // Calcular posição se não fornecida
+    let leadPosition = position;
+    if (leadPosition === undefined && columnId) {
+      const existingLeads = await prisma.lead.count({
+        where: { columnId }
+      });
+      leadPosition = existingLeads;
     }
     
     const lead = await prisma.lead.create({
@@ -45,7 +54,7 @@ export async function POST(request: Request) {
         status: status || "novo",
         columnId: columnId || null,
         notes: notes || "",
-        position: 0,
+        position: leadPosition || 0,
       },
     });
     

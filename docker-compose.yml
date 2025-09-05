@@ -34,11 +34,11 @@ services:
       start_period: 60s
 
   # Aplicação ZapBot
-  zapbot:
+  crm:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: zapbot-app
+    container_name: crm-app
     restart: unless-stopped
     ports:
       - "3000:3000"

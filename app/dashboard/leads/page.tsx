@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import Header from "@/app/components/Header";
 import { useState, useEffect } from "react";
 import { useColumnSync } from "@/app/hooks/useColumnSync";
+import { eventEmitter, EVENTS, useStorageEvents } from '@/lib/events';
 
 interface Lead {
   id: string;
@@ -38,6 +39,9 @@ export default function LeadsPage() {
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
   const [currentLead, setCurrentLead] = useState<Lead | null>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importData, setImportData] = useState<any[]>([]);
+  const [isImporting, setIsImporting] = useState(false);
   
   // Form states
   const [formData, setFormData] = useState({
@@ -48,6 +52,12 @@ export default function LeadsPage() {
     status: 'novo',
     notes: ''
   });
+
+  // Função para converter status em nome amigável
+  const getStatusDisplayName = (status: string): string => {
+    const column = columns.find(col => col.id === status);
+    return column ? column.title : status;
+  };
 
   // Atualizar status padrão quando colunas carregarem
   useEffect(() => {
@@ -65,6 +75,10 @@ export default function LeadsPage() {
       fetchLeads();
       fetchColumns();
     }
+    
+    // Configurar listener para eventos de storage
+    const cleanup = useStorageEvents();
+    return cleanup;
   }, [status]);
 
   // Sincronização automática com mudanças de colunas do Kanban
@@ -134,21 +148,33 @@ export default function LeadsPage() {
   // Adicionar novo lead
   const handleAddLead = async () => {
     try {
+      // Encontrar a primeira coluna para associar o lead
+      const firstColumn = columns.find(col => col.position === 0) || columns[0];
+      
+      const leadData = {
+        ...formData,
+        columnId: firstColumn?.id || null, // Associar à primeira coluna
+      };
+      
       const response = await fetch('/api/leads', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(leadData),
       });
 
       if (!response.ok) {
         throw new Error('Falha ao adicionar lead');
       }
 
+      const newLead = await response.json();
       await fetchLeads();
       setShowModal(false);
       resetForm();
+      
+      // Emitir evento de lead criado
+      eventEmitter.emit(EVENTS.LEAD_CREATED, newLead);
     } catch (err) {
       console.error('Erro ao adicionar lead:', err);
       setError('Erro ao adicionar lead. Tente novamente.');
@@ -158,8 +184,15 @@ export default function LeadsPage() {
   // Atualizar lead existente
   const handleUpdateLead = async () => {
     if (!currentLead) return;
-    
+
     try {
+      // Se o lead não tem columnId, associar à primeira coluna
+      let columnId = currentLead.columnId;
+      if (!columnId) {
+        const firstColumn = columns.find(col => col.position === 0) || columns[0];
+        columnId = firstColumn?.id || null;
+      }
+      
       const response = await fetch(`/api/leads/${currentLead.id}`, {
         method: 'PUT',
         headers: {
@@ -168,7 +201,7 @@ export default function LeadsPage() {
         body: JSON.stringify({
           ...formData,
           position: currentLead.position,
-          columnId: currentLead.columnId
+          columnId: columnId
         }),
       });
 
@@ -176,9 +209,13 @@ export default function LeadsPage() {
         throw new Error('Falha ao atualizar lead');
       }
 
+      const updatedLead = await response.json();
       await fetchLeads();
       setShowModal(false);
       resetForm();
+      
+      // Emitir evento de lead atualizado
+      eventEmitter.emit(EVENTS.LEAD_UPDATED, updatedLead);
     } catch (err) {
       console.error('Erro ao atualizar lead:', err);
       setError('Erro ao atualizar lead. Tente novamente.');
@@ -199,6 +236,9 @@ export default function LeadsPage() {
       }
 
       await fetchLeads();
+      
+      // Emitir evento de lead deletado
+      eventEmitter.emit(EVENTS.LEAD_DELETED, { id });
     } catch (err) {
       console.error('Erro ao excluir lead:', err);
       setError('Erro ao excluir lead. Tente novamente.');
@@ -259,6 +299,124 @@ export default function LeadsPage() {
     }
   };
 
+  // Manipular importação de arquivo Excel
+  const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Verificar tipo de arquivo
+    const validTypes = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+      'application/vnd.ms-excel', // .xls
+      'text/csv' // .csv
+    ];
+    
+    if (!validTypes.includes(file.type) && !file.name.match(/\.(xlsx|xls|csv)$/i)) {
+      setError('❌ Formato de arquivo inválido. Use apenas arquivos Excel (.xlsx, .xls) ou CSV (.csv)');
+      e.target.value = '';
+      return;
+    }
+
+    try {
+      const XLSX = await import('xlsx');
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      
+      if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+        throw new Error('Arquivo não contém planilhas válidas');
+      }
+      
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+      
+      if (!jsonData || jsonData.length === 0) {
+        setError('❌ Arquivo está vazio ou não contém dados válidos.');
+        e.target.value = '';
+        return;
+      }
+      
+      console.log('📊 Dados importados:', jsonData);
+      setImportData(jsonData);
+      setShowImportModal(true);
+      setError(null); // Limpar erros anteriores
+    } catch (error) {
+      console.error('❌ Erro ao importar arquivo:', error);
+      setError('❌ Erro ao processar arquivo. Verifique se é um arquivo Excel/CSV válido e tente novamente.');
+    }
+    
+    // Limpar input
+    e.target.value = '';
+  };
+
+  // Processar importação dos leads
+  const processImport = async () => {
+    if (importData.length === 0) return;
+    
+    setIsImporting(true);
+    let successCount = 0;
+    let errorCount = 0;
+    
+    try {
+      // Encontrar a primeira coluna para associar os leads
+      const firstColumn = columns.find(col => col.position === 0) || columns[0];
+      
+      for (const row of importData) {
+        try {
+          const leadData = {
+            name: row.Nome || row.nome || row.Name || row.name || '',
+            email: row.Email || row.email || '',
+            phone: row.Telefone || row.telefone || row.Phone || row.phone || '',
+            source: row.Origem || row.origem || row.Source || row.source || 'Excel',
+            notes: row.Observações || row.observacoes || row.Notes || row.notes || '',
+            columnId: firstColumn?.id || null,
+          };
+          
+          if (!leadData.name) {
+            console.warn('⚠️ Lead sem nome ignorado:', row);
+            errorCount++;
+            continue;
+          }
+          
+          const response = await fetch('/api/leads', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(leadData),
+          });
+          
+          if (response.ok) {
+            const newLead = await response.json();
+            successCount++;
+            // Emitir evento de lead criado
+            eventEmitter.emit(EVENTS.LEAD_CREATED, newLead);
+          } else {
+            errorCount++;
+            console.error('❌ Erro ao criar lead:', leadData);
+          }
+        } catch (error) {
+          errorCount++;
+          console.error('❌ Erro ao processar linha:', row, error);
+        }
+      }
+      
+      await fetchLeads();
+      setShowImportModal(false);
+      setImportData([]);
+      
+      if (successCount > 0) {
+        setError(`✅ ${successCount} leads importados com sucesso! ${errorCount > 0 ? `${errorCount} erros encontrados.` : ''}`);
+      } else {
+        setError('❌ Nenhum lead foi importado. Verifique o formato do arquivo.');
+      }
+    } catch (error) {
+      console.error('❌ Erro na importação:', error);
+      setError('Erro durante a importação. Tente novamente.');
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   // Redireciona para login se não estiver autenticado
   if (status === "unauthenticated") {
     redirect("/login");
@@ -271,12 +429,27 @@ export default function LeadsPage() {
       <div className="mt-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">Lista de Leads</h2>
-          <button 
-            onClick={openAddModal}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
-          >
-            Adicionar Lead
-          </button>
+          <div className="flex gap-2">
+            <input
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={handleFileImport}
+              className="hidden"
+              id="excel-import"
+            />
+            <label
+              htmlFor="excel-import"
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md cursor-pointer flex items-center gap-2"
+            >
+              📊 Importar Excel
+            </label>
+            <button 
+              onClick={openAddModal}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
+            >
+              Adicionar Lead
+            </button>
+          </div>
         </div>
         
         {error && (
@@ -325,7 +498,7 @@ export default function LeadsPage() {
                           lead.status === "negociacao" ? "bg-orange-900 text-orange-200" :
                           "bg-green-900 text-green-200"
                         }`}>
-                          {lead.status}
+                          {getStatusDisplayName(lead.status)}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-200">
@@ -404,8 +577,8 @@ export default function LeadsPage() {
                 >
                   <option value="Site">Site</option>
                   <option value="WhatsApp">WhatsApp</option>
-                  <option value="Facebook">Facebook</option>
-                  <option value="Instagram">Instagram</option>
+                    <option value="Facebook">Facebook</option>
+                    <option value="Instagram">Instagram</option>
                   <option value="Indicação">Indicação</option>
                 </select>
               </div>
@@ -453,6 +626,88 @@ export default function LeadsPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      
+      {/* Modal de Importação */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 p-6 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-semibold mb-4">Importar Leads do Excel</h3>
+            
+            <div className="mb-6">
+              <h4 className="font-medium mb-2">📋 Instruções para o arquivo Excel:</h4>
+              <div className="bg-gray-700 p-4 rounded-md text-sm">
+                <p className="mb-2">O arquivo deve conter as seguintes colunas (não obrigatórias, mas recomendadas):</p>
+                <ul className="list-disc list-inside space-y-1 text-gray-300">
+                  <li><strong>Nome</strong> ou <strong>Name</strong> - Nome do lead (obrigatório)</li>
+                  <li><strong>Email</strong> - Endereço de email</li>
+                  <li><strong>Telefone</strong> ou <strong>Phone</strong> - Número de telefone</li>
+                  <li><strong>Origem</strong> ou <strong>Source</strong> - Origem do lead</li>
+                  <li><strong>Observações</strong> ou <strong>Notes</strong> - Notas adicionais</li>
+                </ul>
+                <div className="mt-3 flex items-center justify-between">
+                  <p className="text-yellow-400">⚠️ Apenas leads com nome serão importados.</p>
+                  <a 
+                    href="/exemplo-planilha-leads.csv" 
+                    download="exemplo-leads.csv"
+                    className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-white text-xs"
+                  >
+                    📥 Baixar Exemplo
+                  </a>
+                </div>
+              </div>
+            </div>
+            
+            {importData.length > 0 && (
+              <div className="mb-6">
+                <h4 className="font-medium mb-2">📊 Preview dos dados ({importData.length} registros):</h4>
+                <div className="bg-gray-700 p-4 rounded-md max-h-40 overflow-y-auto">
+                  <div className="text-xs">
+                    {importData.slice(0, 3).map((row, index) => (
+                      <div key={index} className="mb-2 p-2 bg-gray-600 rounded">
+                        <div><strong>Nome:</strong> {row.Nome || row.nome || row.Name || row.name || 'N/A'}</div>
+                        <div><strong>Email:</strong> {row.Email || row.email || 'N/A'}</div>
+                        <div><strong>Telefone:</strong> {row.Telefone || row.telefone || row.Phone || row.phone || 'N/A'}</div>
+                      </div>
+                    ))}
+                    {importData.length > 3 && (
+                      <div className="text-gray-400">... e mais {importData.length - 3} registros</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowImportModal(false);
+                  setImportData([]);
+                }}
+                className="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-md"
+                disabled={isImporting}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={processImport}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-md flex items-center gap-2"
+                disabled={isImporting || importData.length === 0}
+              >
+                {isImporting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                    Importando...
+                  </>
+                ) : (
+                  <>📊 Importar {importData.length} Leads</>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

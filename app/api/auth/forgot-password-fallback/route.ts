@@ -109,10 +109,10 @@ export async function POST(request: Request) {
     await transporter.sendMail({
       from: process.env.EMAIL_FROM,
       to: email,
-      subject: 'Recuperação de Senha - ZapBot',
+      subject: 'Recuperação de Senha - CRM',
       html: `
         <h2>Recuperação de Senha</h2>
-        <p>Você solicitou a recuperação de sua senha.</p>
+        <p>Você solicitou a recuperação de senha para sua conta no CRM.</p>
         <p>Clique no link abaixo para redefinir sua senha:</p>
         <a href="${resetUrl}" style="background-color: #4CAF50; color: white; padding: 14px 20px; text-decoration: none; display: inline-block;">Redefinir Senha</a>
         <p>Este link expira em 1 hora.</p>
