@@ -1,0 +1,187 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String       @id @default(uuid())
+  name        String
+  email       String       @unique
+  password    String
+  userType    UserType     @default(MANAGER)
+  isSuperAdmin Boolean     @default(false)
+  accountId   String?      // ID da conta/empresa do usuário
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  attendances Attendance[]
+  createdLeads Lead[]      @relation("UserCreatedLeads")
+  managedAttendants Attendant[] @relation("ManagerAttendants")
+}
+
+enum UserType {
+  ADMIN
+  MANAGER
+}
+
+
+model Lead {
+  id          String       @id @default(uuid())
+  name        String
+  email       String?
+  phone       String?
+  source      String?
+  status      String       @default("novo")
+  notes       String?      @db.Text
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime?
+  deletedBy   String?
+  columnId    String?
+  position    Int          @default(0)
+  attendantId String?
+  createdBy   String?      // ID do usuário que criou o lead
+  column      Column?      @relation(fields: [columnId], references: [id])
+  attendant   Attendant?   @relation("AttendantLeads", fields: [attendantId], references: [id])
+  creator     User?        @relation("UserCreatedLeads", fields: [createdBy], references: [id])
+  attendances Attendance[]
+  ratings     Rating[]
+
+  @@index([columnId], map: "Lead_columnId_fkey")
+  @@index([attendantId], map: "Lead_attendantId_fkey")
+  @@index([createdBy], map: "Lead_createdBy_fkey")
+  @@index([deletedAt], map: "Lead_deletedAt_idx")
+}
+
+model Column {
+  id        String   @id @default(uuid())
+  title     String
+  position  Int      @default(0)
+  color     String   @default("#6B7280") // Cor padrão cinza
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  deletedBy String?
+  leads     Lead[]
+
+  @@index([deletedAt], map: "Column_deletedAt_idx")
+}
+
+model Integration {
+  id        String   @id @default(uuid())
+  name      String
+  type      String
+  config    String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Attendance {
+  id          String      @id @default(uuid())
+  leadId      String
+  userId      String?
+  type        String      // "call", "email", "meeting", "whatsapp", "note", "follow_up"
+  subject     String?
+  description String?     @db.Text
+  status      String      @default("pending") // "pending", "completed", "cancelled"
+  priority    String      @default("medium") // "low", "medium", "high", "urgent"
+  scheduledAt DateTime?
+  completedAt DateTime?
+  duration    Int?        // em minutos
+  outcome     String?     // "successful", "no_answer", "callback", "not_interested", "converted"
+  nextAction  String?     @db.Text
+  tags        String?     // tags separadas por vírgula
+  attachments String?     @db.Text // URLs ou paths dos anexos
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  lead        Lead        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user        User?       @relation(fields: [userId], references: [id])
+
+  @@index([leadId], map: "Attendance_leadId_fkey")
+  @@index([userId], map: "Attendance_userId_fkey")
+  @@index([scheduledAt], map: "Attendance_scheduledAt_idx")
+  @@index([status], map: "Attendance_status_idx")
+}
+
+model Position {
+  id          String      @id @default(uuid())
+  name        String      @unique
+  description String?
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  attendants  Attendant[]
+}
+
+model Function {
+  id          String      @id @default(uuid())
+  name        String      @unique
+  description String?
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  attendants  Attendant[]
+}
+
+model Department {
+  id          String      @id @default(uuid())
+  name        String      @unique
+  description String?
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  attendants  Attendant[]
+}
+
+model Attendant {
+  id           String      @id @default(uuid())
+  name         String
+  email        String      @unique
+  password     String?     // senha para login do atendente
+  phone        String?
+  cpf          String?     @unique
+  positionId   String?
+  functionId   String?
+  departmentId String?
+  managerId    String?     // ID do gerente responsável
+  startTime    String      // horário de início (formato HH:mm)
+  endTime      String      // horário de fim (formato HH:mm)
+  workDays     String      // dias da semana (ex: "1,2,3,4,5" para seg-sex)
+  isActive     Boolean     @default(true)
+  canLogin     Boolean     @default(false) // se o atendente pode fazer login
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  position     Position?   @relation(fields: [positionId], references: [id])
+  function     Function?   @relation(fields: [functionId], references: [id])
+  department   Department? @relation(fields: [departmentId], references: [id])
+  manager      User?       @relation("ManagerAttendants", fields: [managerId], references: [id])
+  leads        Lead[]      @relation("AttendantLeads")
+  ratings      Rating[]
+
+  @@index([positionId], map: "Attendant_positionId_fkey")
+  @@index([functionId], map: "Attendant_functionId_fkey")
+  @@index([departmentId], map: "Attendant_departmentId_fkey")
+  @@index([managerId], map: "Attendant_managerId_fkey")
+}
+
+model Rating {
+  id          String    @id @default(uuid())
+  attendantId String
+  leadId      String?
+  score       Int       // pontuação de 1 a 5
+  type        String    // "elogio", "critica", "avaliacao"
+  comment     String?   @db.Text
+  ratedBy     String?   // quem fez a avaliação
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  attendant   Attendant @relation(fields: [attendantId], references: [id], onDelete: Cascade)
+  lead        Lead?     @relation(fields: [leadId], references: [id])
+
+  @@index([attendantId], map: "Rating_attendantId_fkey")
+  @@index([leadId], map: "Rating_leadId_fkey")
+  @@index([type], map: "Rating_type_idx")
+}

@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZapBot - Sistema de Gestão de Leads</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+            min-height: 100vh;
+        }
+
+        /* Header Styles */
+        .header {
+            background: rgba(31, 41, 55, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 0;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
+            border-bottom: 1px solid rgba(75, 85, 99, 0.3);
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 2rem;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #60a5fa;
+            text-decoration: none;
+        }
+
+        .nav-menu {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+
+        .nav-menu a {
+            text-decoration: none;
+            color: #d1d5db;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .nav-menu a:hover {
+            color: #60a5fa;
+        }
+
+        .login-buttons {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn-login {
+            padding: 0.5rem 1.5rem;
+            border: none;
+            border-radius: 25px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .btn-manager {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-manager:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+        }
+
+        .btn-attendant {
+            background: transparent;
+            color: #60a5fa;
+            border: 2px solid #60a5fa;
+        }
+
+        .btn-attendant:hover {
+            background: #60a5fa;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-top: 80px;
+            padding: 2rem 0;
+            color: #ffffff;
+        }
+
+        /* System Info Styles */
+        .system-info {
+            padding: 4rem 0;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            margin: 2rem 0;
+            border-radius: 20px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .info-card {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 2rem;
+            border-radius: 15px;
+            color: #333;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .info-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card-icon {
+            font-size: 3rem;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        .info-card h3 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            color: #3b82f6;
+            font-size: 1.5rem;
+        }
+
+        .info-card ul {
+            list-style: none;
+        }
+
+        .info-card li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #eee;
+            position: relative;
+            padding-left: 1.5rem;
+        }
+
+        .info-card li:before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #3b82f6;
+            font-weight: bold;
+        }
+
+        /* Lead Management Styles */
+        .lead-management {
+            padding: 4rem 0;
+            background: rgba(255, 255, 255, 0.05);
+            margin: 2rem 0;
+            border-radius: 20px;
+        }
+
+        .management-content h2 {
+            text-align: center;
+            margin-bottom: 3rem;
+            font-size: 2.5rem;
+        }
+
+        .management-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+        }
+
+        .management-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2rem;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .management-item h4 {
+            color: #fff;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .management-item p {
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1.6;
+        }
+
+        /* WhatsApp Integration Styles */
+        .whatsapp-integration {
+            padding: 4rem 0;
+            background: rgba(16, 185, 129, 0.1);
+            margin: 2rem 0;
+            border-radius: 20px;
+            border: 2px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .whatsapp-content h2 {
+            text-align: center;
+            margin-bottom: 3rem;
+            font-size: 2.5rem;
+            color: #10b981;
+        }
+
+        .whatsapp-features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+        }
+
+        .whatsapp-feature {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 2rem;
+            border-radius: 15px;
+            color: #333;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .whatsapp-feature:hover {
+            transform: translateY(-5px);
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .whatsapp-feature h4 {
+            color: #10b981;
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+
+        .whatsapp-feature p {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        header {
+            padding: 20px 0;
+            text-align: center;
+            border-bottom: 1px solid #374151;
+        }
+
+        .logo {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #3b82f6;
+            margin-bottom: 10px;
+        }
+
+        .tagline {
+            font-size: 1.1rem;
+            color: #9ca3af;
+            margin-bottom: 30px;
+        }
+
+        .hero {
+            text-align: center;
+            padding: 80px 0;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 1.3rem;
+            color: #d1d5db;
+            margin-bottom: 50px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.6;
+        }
+
+        .login-section {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-bottom: 80px;
+            flex-wrap: wrap;
+        }
+
+        .login-card {
+            background: rgba(55, 65, 81, 0.5);
+            border: 1px solid #374151;
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            min-width: 300px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .login-card:hover::before {
+            opacity: 1;
+        }
+
+        .login-card:hover {
+            transform: translateY(-5px);
+            border-color: #3b82f6;
+            box-shadow: 0 20px 40px rgba(59, 130, 246, 0.2);
+        }
+
+        .login-card h3 {
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .login-card p {
+            color: #9ca3af;
+            margin-bottom: 30px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .login-btn {
+            display: inline-block;
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 1;
+            border: none;
+            cursor: pointer;
+        }
+
+        .login-btn:hover {
+            background: linear-gradient(135deg, #1d4ed8, #1e40af);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+        }
+
+        .login-btn.attendant {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .login-btn.attendant:hover {
+            background: linear-gradient(135deg, #059669, #047857);
+            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 80px;
+        }
+
+        .feature {
+            background: rgba(55, 65, 81, 0.3);
+            border: 1px solid #374151;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .feature:hover {
+            transform: translateY(-3px);
+            border-color: #4b5563;
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .feature h4 {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: #f3f4f6;
+        }
+
+        .feature p {
+            color: #9ca3af;
+            line-height: 1.6;
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px 0;
+            border-top: 1px solid #374151;
+            color: #6b7280;
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .hero p {
+                font-size: 1.1rem;
+            }
+
+            .login-section {
+                flex-direction: column;
+                align-items: center;
+                gap: 20px;
+            }
+
+            .login-card {
+                min-width: 280px;
+                padding: 30px;
+            }
+        }
+
+        .animated {
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <nav class="nav-container">
+            <a href="/" class="logo">🤖 ZapBot</a>
+            <ul class="nav-menu">
+                <li><a href="#features">Recursos</a></li>
+                <li><a href="#about">Sobre</a></li>
+                <li><a href="#contact">Contato</a></li>
+            </ul>
+            <div class="login-buttons">
+                <a href="/login" class="btn-login btn-manager">Gerentes</a>
+                <a href="/attendant/login" class="btn-login btn-attendant">Atendentes</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="main-content">
+        <div class="container">
+            <section class="hero animated">
+                <h1>Transforme Seus Leads em Resultados</h1>
+                <p>Gerencie, organize e converta seus leads com eficiência máxima usando nossa plataforma inteligente de CRM com integração WhatsApp.</p>
+            </section>
+
+            <section id="about" class="system-info">
+                <div class="info-grid">
+                    <div class="info-card admin-card">
+                        <div class="card-icon">👑</div>
+                        <h3>Administrador</h3>
+                        <ul>
+                            <li>Visão completa de todas as estatísticas do sistema</li>
+                            <li>Gerenciamento de gerentes e atendentes</li>
+                            <li>Acesso direto às contas dos atendentes com um clique</li>
+                            <li>Controle total sobre leads, colunas e configurações</li>
+                            <li>Relatórios gerais de performance</li>
+                            <li>Configuração de integrações e automações</li>
+                        </ul>
+                    </div>
+
+                    <div class="info-card manager-card">
+                        <div class="card-icon">👨‍💼</div>
+                        <h3>Gerente</h3>
+                        <ul>
+                            <li>Visualiza apenas estatísticas de sua equipe</li>
+                            <li>Gerencia leads de seus atendentes</li>
+                            <li>Acesso direto às contas de seus atendentes</li>
+                            <li>Criação e edição de leads para sua equipe</li>
+                            <li>Relatórios de performance da equipe</li>
+                            <li>Supervisão de atividades dos atendentes</li>
+                        </ul>
+                    </div>
+
+                    <div class="info-card attendant-card">
+                        <div class="card-icon">👤</div>
+                        <h3>Atendente</h3>
+                        <ul>
+                            <li>Visualiza apenas seus próprios leads</li>
+                            <li>Gerencia leads atribuídos a ele</li>
+                            <li>Atualiza status e informações dos leads</li>
+                            <li>Registra atividades e acompanhamentos</li>
+                            <li>Acesso ao sistema de mensagens WhatsApp</li>
+                            <li>Dashboard personalizado com suas métricas</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section class="login-section animated">
+                <div class="login-card">
+                    <h3>👨‍💼 Gerentes & Administradores</h3>
+                    <p>Acesse o painel administrativo completo com relatórios, gestão de equipe e configurações avançadas.</p>
+                    <a href="/login" class="login-btn">Fazer Login</a>
+                </div>
+
+                <div class="login-card">
+                    <h3>👤 Atendentes</h3>
+                    <p>Acesse seu painel personalizado para gerenciar seus leads e acompanhar seu desempenho.</p>
+                    <a href="/attendant/login" class="login-btn attendant">Fazer Login</a>
+                </div>
+            </section>
+
+            <section class="lead-management">
+                <div class="management-content">
+                    <h2>🎯 Gerenciamento Avançado de Leads</h2>
+                    <div class="management-grid">
+                        <div class="management-item">
+                            <h4>📊 Sistema Kanban Intuitivo</h4>
+                            <p>Organize seus leads em colunas personalizáveis, acompanhe o progresso em tempo real e mova leads facilmente entre as etapas do funil de vendas.</p>
+                        </div>
+                        <div class="management-item">
+                            <h4>👥 Atribuição Inteligente</h4>
+                            <p>Distribua leads automaticamente para atendentes ou gerencie manualmente a atribuição baseada em critérios específicos como região, produto ou expertise.</p>
+                        </div>
+                        <div class="management-item">
+                            <h4>📈 Acompanhamento Detalhado</h4>
+                            <p>Registre todas as interações, anotações e atividades relacionadas a cada lead, mantendo um histórico completo para melhor follow-up.</p>
+                        </div>
+                        <div class="management-item">
+                            <h4>🔔 Notificações e Lembretes</h4>
+                            <p>Configure alertas automáticos para follow-ups, reuniões agendadas e leads que precisam de atenção urgente.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="whatsapp-integration">
+                <div class="whatsapp-content">
+                    <h2>📱 Integração WhatsApp Ilimitada</h2>
+                    <div class="whatsapp-features">
+                        <div class="whatsapp-feature">
+                            <div class="feature-icon">💬</div>
+                            <h4>Mensagens Ilimitadas</h4>
+                            <p>Envie quantas mensagens quiser pelo WhatsApp diretamente da plataforma, sem limitações de quantidade ou frequência.</p>
+                        </div>
+                        <div class="whatsapp-feature">
+                            <div class="feature-icon">📋</div>
+                            <h4>Importação de Contatos</h4>
+                            <p>Importe facilmente suas listas de contatos em formato CSV, Excel ou outros formatos compatíveis para começar a enviar mensagens imediatamente.</p>
+                        </div>
+                        <div class="whatsapp-feature">
+                            <div class="feature-icon">🤖</div>
+                            <h4>Automação Inteligente</h4>
+                            <p>Configure mensagens automáticas, respostas padrão e sequências de follow-up para otimizar seu tempo e aumentar a eficiência.</p>
+                        </div>
+                        <div class="whatsapp-feature">
+                            <div class="feature-icon">📊</div>
+                            <h4>Relatórios de Engajamento</h4>
+                            <p>Acompanhe métricas de entrega, visualização e resposta das suas mensagens WhatsApp para otimizar suas campanhas.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="features animated" id="features">
+                <div class="feature">
+                    <span class="feature-icon">📊</span>
+                    <h4>Dashboard Inteligente</h4>
+                    <p>Visualize métricas em tempo real, acompanhe o desempenho da equipe e tome decisões baseadas em dados.</p>
+                </div>
+
+                <div class="feature">
+                    <span class="feature-icon">📋</span>
+                    <h4>Kanban Personalizado</h4>
+                    <p>Organize leads em colunas customizáveis, arraste e solte para atualizar status e mantenha o fluxo organizado.</p>
+                </div>
+
+                <div class="feature">
+                    <span class="feature-icon">👥</span>
+                    <h4>Gestão de Equipe</h4>
+                    <p>Atribua leads automaticamente, monitore performance individual e otimize a distribuição de trabalho.</p>
+                </div>
+
+                <div class="feature">
+                    <span class="feature-icon">🔄</span>
+                    <h4>Integrações</h4>
+                    <p>Conecte com suas ferramentas favoritas e automatize a captura de leads de múltiplas fontes.</p>
+                </div>
+
+                <div class="feature">
+                    <span class="feature-icon">📱</span>
+                    <h4>Responsivo</h4>
+                    <p>Acesse de qualquer dispositivo - desktop, tablet ou smartphone. Interface otimizada para todos os tamanhos.</p>
+                </div>
+
+                <div class="feature">
+                    <span class="feature-icon">🔒</span>
+                    <h4>Seguro</h4>
+                    <p>Seus dados protegidos com criptografia avançada, backups automáticos e controle de acesso granular.</p>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 ZapBot CRM. Todos os direitos reservados. | Desenvolvido para maximizar suas conversões.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Adicionar animações quando elementos entram na viewport
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('animated');
+                }
+            });
+        }, observerOptions);
+
+        // Observar elementos que devem ser animados
+        document.querySelectorAll('.feature, .login-card').forEach(el => {
+            observer.observe(el);
+        });
+
+        // Adicionar efeito de hover nos cards de login
+        document.querySelectorAll('.login-card').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                card.style.transform = 'translateY(-5px) scale(1.02)';
+            });
+            
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'translateY(0) scale(1)';
+            });
+        });
+    </script>
+</body>
+</html>

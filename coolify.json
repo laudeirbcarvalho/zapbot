@@ -1,0 +1,66 @@
+{
+  "name": "ZapBot",
+  "description": "Sistema de automação e gestão de leads com WhatsApp",
+  "type": "application",
+  "build": {
+    "buildpack": "dockerfile",
+    "dockerfile": "Dockerfile",
+    "context": ".",
+    "args": {}
+  },
+  "deploy": {
+    "port": 3000,
+    "healthcheck": {
+      "path": "/api/health",
+      "port": 3000,
+      "interval": 30,
+      "timeout": 10,
+      "retries": 3,
+      "start_period": 40
+    }
+  },
+  "environment": {
+    "NODE_ENV": "production",
+    "PORT": "3000",
+    "NEXT_TELEMETRY_DISABLED": "1"
+  },
+  "required_env": [
+    "DATABASE_URL",
+    "NEXTAUTH_SECRET",
+    "NEXTAUTH_URL",
+    "DB_HOST",
+    "DB_PORT",
+    "DB_USER",
+    "DB_PASS",
+    "DB_NAME"
+  ],
+  "optional_env": [
+    "EMAIL_SERVER_HOST",
+    "EMAIL_SERVER_PORT",
+    "EMAIL_SERVER_USER",
+    "EMAIL_SERVER_PASSWORD",
+    "EMAIL_FROM"
+  ],
+  "volumes": [
+    {
+      "source": "zapbot_data",
+      "target": "/app/data",
+      "type": "volume"
+    }
+  ],
+  "networks": ["zapbot-network"],
+  "restart_policy": "unless-stopped",
+  "resources": {
+    "memory": "512m",
+    "cpu": "0.5"
+  },
+  "domains": {
+    "auto_ssl": true,
+    "force_https": true
+  },
+  "backup": {
+    "enabled": false,
+    "schedule": "0 2 * * *",
+    "retention": 7
+  }
+}
