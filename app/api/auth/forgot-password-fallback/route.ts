@@ -109,7 +109,7 @@ export async function POST(request: Request) {
     await transporter.sendMail({
       from: process.env.EMAIL_FROM,
       to: email,
-      subject: 'Recuperação de Senha - ZapBot',
+      subject: `Recuperação de Senha - ${process.env.SYSTEM_NAME || 'Sistema'}`,
       html: `
         <h2>Recuperação de Senha</h2>
         <p>Você solicitou a recuperação de sua senha.</p>

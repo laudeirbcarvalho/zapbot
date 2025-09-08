@@ -3,10 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
+import { useTenant } from "../hooks/useTenant";
 
 
 export default function LoginPage() {
   const router = useRouter();
+  const { getSystemName, getSystemLogo } = useTenant();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -76,7 +78,18 @@ export default function LoginPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900">
         <div className="bg-gray-800 p-8 rounded-lg shadow-lg w-full max-w-md">
-          <h1 className="text-3xl font-bold text-center text-white mb-6">ZapBot</h1>
+          <div className="flex flex-col items-center mb-6">
+            {getSystemLogo() && (
+              <img 
+                src={getSystemLogo()} 
+                alt="Logo" 
+                className="h-16 w-auto mb-4"
+              />
+            )}
+            <h1 className="text-3xl font-bold text-center text-white">
+              {getSystemName()}
+            </h1>
+          </div>
           <h2 className="text-xl text-center text-gray-300 mb-6">Recuperar Senha</h2>
           
           {forgotPasswordMessage && (
@@ -127,7 +140,18 @@ export default function LoginPage() {
 
         
         <div className="bg-gray-800 p-8 rounded-lg shadow-lg">
-          <h1 className="text-3xl font-bold text-center text-white mb-6">CRM</h1>
+          <div className="flex flex-col items-center mb-6">
+            {getSystemLogo() && (
+              <img 
+                src={getSystemLogo()} 
+                alt="Logo" 
+                className="h-16 w-auto mb-4"
+              />
+            )}
+            <h1 className="text-3xl font-bold text-center text-white">
+              {getSystemName()}
+            </h1>
+          </div>
           <h2 className="text-xl text-center text-gray-300 mb-6">Faça login para acessar o dashboard</h2>
           
           {error && (

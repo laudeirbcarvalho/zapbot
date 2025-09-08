@@ -1,7 +1,6 @@
-"use client";
-
 import { Geist, Geist_Mono } from "next/font/google";
-import { SessionProvider } from "next-auth/react";
+import { TenantProvider } from "./components/TenantProvider";
+import { ClientProviders } from "./components/ClientProviders";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -21,13 +20,20 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <meta name="tenant-id" content="" />
+        <meta name="tenant-slug" content="" />
+        <meta name="tenant-name" content="" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning={true}
       >
-        <SessionProvider>
-          {children}
-        </SessionProvider>
+        <TenantProvider>
+          <ClientProviders>
+            {children}
+          </ClientProviders>
+        </TenantProvider>
       </body>
     </html>
   );

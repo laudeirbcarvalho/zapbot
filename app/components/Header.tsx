@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTenant } from "../hooks/useTenant";
 
 interface User {
   id: string;
@@ -13,6 +14,7 @@ interface User {
 
 export default function Header({ title }: { title: string }) {
   const [user, setUser] = useState<User | null>(null);
+  const { tenant, settings } = useTenant();
 
   useEffect(() => {
     // Obter dados do usuário do localStorage
@@ -37,9 +39,24 @@ export default function Header({ title }: { title: string }) {
     return userType === 'ADMIN' ? 'bg-purple-500' : 'bg-blue-500';
   };
 
+  const systemName = settings?.system_name || tenant?.name || 'ZapBot';
+  const logoUrl = settings?.system_logo_url;
+
   return (
     <header className="bg-gray-800 p-4 flex justify-between items-center">
-      <h1 className="text-xl font-semibold text-white">{title}</h1>
+      <div className="flex items-center space-x-3">
+        {logoUrl && (
+          <img 
+            src={logoUrl} 
+            alt="Logo" 
+            className="h-8 w-auto"
+          />
+        )}
+        <div>
+          <h1 className="text-xl font-semibold text-white">{title}</h1>
+          <div className="text-xs text-gray-400">{systemName}</div>
+        </div>
+      </div>
       <div className="flex items-center space-x-3">
         <div className="text-right">
           <div className="text-white font-medium">

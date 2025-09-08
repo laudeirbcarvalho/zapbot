@@ -12,12 +12,12 @@ export default function ConfiguracoesPage() {
   const { isAdmin, userId, isLoading } = useAuth();
 
   const [formData, setFormData] = useState({
-    nomeEmpresa: "ZapBot Marketing",
-    email: "contato@zapbot.com",
-    telefone: "(11) 99999-0000",
-    endereco: "Av. Paulista, 1000 - São Paulo, SP",
-    webhookUrl: "https://zapbot.com/api/webhook",
-    apiKey: "sk_test_123456789abcdef",
+    nomeEmpresa: "",
+    email: "",
+    telefone: "",
+    endereco: "",
+    webhookUrl: "",
+    apiKey: "",
     tema: "escuro"
   });
   const [dataLoading, setDataLoading] = useState(true);
