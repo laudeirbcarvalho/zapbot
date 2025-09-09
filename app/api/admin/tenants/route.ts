@@ -11,13 +11,7 @@ export async function GET(request: NextRequest) {
     requireSuperAdmin(request);
 
     const tenants = await prisma.tenant.findMany({
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        domain: true,
-        isSuperAdmin: true,
-        createdAt: true,
+      include: {
         _count: {
           select: {
             users: true,
@@ -26,25 +20,28 @@ export async function GET(request: NextRequest) {
         },
         users: {
           where: {
-            userType: 'MANAGER'
+            userType: 'ADMIN'
           },
-          include: {
-            managedAttendants: {
-              include: {
-                _count: {
-                  select: {
-                    leads: true
-                  }
-                }
-              }
-            }
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            isSuperAdmin: true,
+            userType: true
           }
         }
       },
       orderBy: { createdAt: 'desc' }
     });
 
-    return NextResponse.json({ tenants });
+    // Adicionar informação do SuperAdmin a cada tenant
+    const tenantsWithSuperAdmin = tenants.map(tenant => ({
+      ...tenant,
+      isSuperAdmin: tenant.users.some(user => user.isSuperAdmin),
+      adminUser: tenant.users.find(user => user.userType === 'ADMIN')
+    }));
+
+    return NextResponse.json({ tenants: tenantsWithSuperAdmin });
   } catch (error) {
     console.error('Erro ao listar tenants:', error);
     
