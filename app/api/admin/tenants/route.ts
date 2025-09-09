@@ -11,7 +11,13 @@ export async function GET(request: NextRequest) {
     requireSuperAdmin(request);
 
     const tenants = await prisma.tenant.findMany({
-      include: {
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        domain: true,
+        isSuperAdmin: true,
+        createdAt: true,
         _count: {
           select: {
             users: true,
