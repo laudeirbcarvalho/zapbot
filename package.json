@@ -23,10 +23,11 @@
     "critters": "^0.0.23",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.542.0",
-    "mysql2": "^3.14.4",
+
     "next": "15.5.2",
     "next-auth": "^4.24.10",
     "nodemailer": "^6.10.1",
+    "pg": "^8.16.3",
     "prisma": "^6.15.0",
     "react": "19.1.0",
     "react-dom": "19.1.0"

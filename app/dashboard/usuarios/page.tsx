@@ -64,6 +64,7 @@ export default function UsersPage() {
         limit: pagination.limit.toString(),
         ...(searchTerm && { search: searchTerm }),
         ...(userTypeFilter && { userType: userTypeFilter }),
+        userType: 'MANAGER', // Apenas gerentes na página de usuários
         ...(isActiveFilter && { isActive: isActiveFilter })
       });
 
@@ -172,7 +173,7 @@ export default function UsersPage() {
   if (isLoading) {
     return (
       <div className="p-6">
-        <Header title="Usuários" />
+        <Header title="Gerentes" />
         <div className="mt-6 text-center">
           <p>Carregando...</p>
         </div>
@@ -183,7 +184,7 @@ export default function UsersPage() {
   if (!userId || !isAdmin) {
     return (
       <div className="p-6">
-        <Header title="Usuários" />
+        <Header title="Gerentes" />
         <div className="mt-6 text-center">
           <div className="bg-red-900 text-red-200 p-4 rounded-md">
             <h2 className="text-xl font-semibold mb-2">Acesso Negado</h2>
@@ -197,7 +198,7 @@ export default function UsersPage() {
   if (dataLoading) {
     return (
       <div className="p-6">
-        <Header title="Usuários" />
+        <Header title="Gerentes" />
         <div className="flex justify-center items-center h-64 mt-6">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
           </div>
@@ -208,7 +209,7 @@ export default function UsersPage() {
   if (error) {
     return (
       <div className="p-6">
-        <Header title="Usuários" />
+        <Header title="Gerentes" />
         <div className="bg-red-900 text-red-200 p-4 rounded-md mt-6">
           <strong>Erro:</strong> {error}
         </div>
@@ -221,14 +222,14 @@ export default function UsersPage() {
       <Header title="Usuários" />
       <div className="space-y-6 mt-6">
         <div className="flex justify-between items-center">
-          <h2 className="text-xl font-semibold text-white">Lista de Usuários</h2>
+          <h2 className="text-xl font-semibold text-white">Lista de Gerentes</h2>
           {isAdmin && (
             <button
               onClick={() => setShowAddModal(true)}
               className="px-4 py-2 rounded-md flex items-center gap-2 transition-colors bg-blue-600 hover:bg-blue-700 text-white"
             >
               <PlusIcon className="h-5 w-5" />
-              Novo Usuário
+              Novo Gerente
             </button>
           )}
         </div>
@@ -257,15 +258,7 @@ export default function UsersPage() {
                 className="w-full px-3 py-2 bg-gray-700 text-white border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Todos</option>
-                {isSuperAdmin && (
-                  <>
-                    <option value="ADMIN">Administrador</option>
-                    <option value="MANAGER">Gerente</option>
-                  </>
-                )}
-                {isAdmin && !isSuperAdmin && (
-                  <option value="MANAGER">Gerente</option>
-                )}
+                <option value="MANAGER">Gerente</option>
               </select>
             </div>
             <div>

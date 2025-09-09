@@ -75,12 +75,12 @@ export const PUT = withAuth(async (request: NextRequest, { params }: { params: {
     
     // Log apenas se houve mudança de posição ou coluna (movimento no kanban)
     if (updateData.position !== undefined || updateData.columnId !== undefined) {
-      console.log('💾 [Kanban] MySQL atualizado - Lead:', lead.id, 'Coluna:', lead.columnId, 'Posição:', lead.position);
+      console.log('💾 [Kanban] PostgreSQL atualizado - Lead:', lead.id, 'Coluna:', lead.columnId, 'Posição:', lead.position);
     }
     
     return NextResponse.json(lead);
   } catch (error) {
-    console.error('❌ [Kanban] Erro ao atualizar lead no MySQL:', {
+    console.error('❌ [Kanban] Erro ao atualizar lead no PostgreSQL:', {
       leadId: id,
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined

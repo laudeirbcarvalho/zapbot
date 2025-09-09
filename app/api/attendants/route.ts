@@ -171,7 +171,7 @@ export const POST = withAuth(async (request: Request) => {
     // Hash da senha
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const attendant = await prisma.Attendant.create({
+    const attendant = await prisma.attendant.create({
       data: {
         name,
         email,
@@ -180,7 +180,7 @@ export const POST = withAuth(async (request: Request) => {
         cpf,
         positionId,
         functionId,
-        department,
+        departmentId: department,
         managerId: managerId || null,
         startTime,
         endTime,

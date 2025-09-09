@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Header from "@/app/components/Header";
 import { useAuth } from "../../hooks/useAuth";
 import { useTenant } from "../../hooks/useTenant";
+import AddAdminModal from '@/app/components/AddAdminModal';
+import EditAdminModal from '@/app/components/EditAdminModal';
 
 interface Administrador {
   id: string;
@@ -37,6 +39,7 @@ export default function SistemaPage() {
   
   const [activeTab, setActiveTab] = useState('administradores');
   const [administradores, setAdministradores] = useState<Administrador[]>([]);
+
   const [systemSettings, setSystemSettings] = useState<SystemSetting[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -68,6 +71,8 @@ export default function SistemaPage() {
   const [showNewAdministradorForm, setShowNewAdministradorForm] = useState(false);
   const [showEditAdministradorForm, setShowEditAdministradorForm] = useState(false);
   const [editingAdministrador, setEditingAdministrador] = useState<Administrador | null>(null);
+  
+
   const [editAdministradorForm, setEditAdministradorForm] = useState({
     name: '',
     slug: '',
@@ -94,6 +99,8 @@ export default function SistemaPage() {
       loadData();
     }
   }, [isSuperAdmin]);
+  
+
 
   const loadData = async () => {
     try {
@@ -103,6 +110,10 @@ export default function SistemaPage() {
       // Carregar administradores
       const administradoresData = await authenticatedFetch('/api/admin/tenants');
       setAdministradores(administradoresData.tenants);
+      
+      // Carregar usuários do sistema
+      const usersData = await authenticatedFetch('/api/users');
+      console.log('Usuários carregados:', usersData);
       
       // Carregar configurações do sistema
       const settingsData = await authenticatedFetch('/api/tenant/settings');
@@ -229,6 +240,8 @@ export default function SistemaPage() {
     }
   };
 
+
+
   const handleEditAdministrador = (administrador: Administrador) => {
     setEditingAdministrador(administrador);
     setEditAdministradorForm({
@@ -292,7 +305,14 @@ export default function SistemaPage() {
     }
   };
 
-  const handleDeleteAdministrador = async (id: string, name: string) => {
+  const handleDeleteAdministrador = async (id: string, name: string, isSuperAdmin?: boolean) => {
+    // Proteger SuperAdmin de ser deletado
+    if (isSuperAdmin) {
+      setError('O SuperAdmin não pode ser excluído!');
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+    
     if (!confirm(`Tem certeza que deseja excluir o administrador "${name}"? Esta ação não pode ser desfeita.`)) {
       return;
     }
@@ -496,6 +516,8 @@ export default function SistemaPage() {
             </div>
           </form>
         )}
+        
+
         
         {activeTab === 'administradores' && (
           <div className="space-y-6">
@@ -773,6 +795,9 @@ export default function SistemaPage() {
                         Nome
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        Tipo
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                         Slug
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
@@ -806,6 +831,15 @@ export default function SistemaPage() {
                       <tr key={administrador.id} className="hover:bg-gray-700">
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-200">
                           {administrador.name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            administrador.isSuperAdmin 
+                              ? 'bg-purple-900 text-purple-200' 
+                              : 'bg-blue-900 text-blue-200'
+                          }`}>
+                            {administrador.isSuperAdmin ? 'SuperAdmin' : 'Administrador'}
+                          </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                           <code className="bg-gray-600 px-2 py-1 rounded text-xs">
@@ -859,9 +893,14 @@ export default function SistemaPage() {
                               </svg>
                             </button>
                             <button
-                              onClick={() => handleDeleteAdministrador(administrador.id, administrador.name)}
-                              className="text-red-400 hover:text-red-300 transition-colors"
-                              title="Excluir"
+                              onClick={() => handleDeleteAdministrador(administrador.id, administrador.name, administrador.isSuperAdmin)}
+                              className={`transition-colors ${
+                                administrador.isSuperAdmin 
+                                  ? 'text-gray-500 cursor-not-allowed' 
+                                  : 'text-red-400 hover:text-red-300'
+                              }`}
+                              title={administrador.isSuperAdmin ? 'SuperAdmin não pode ser excluído' : 'Excluir'}
+                              disabled={administrador.isSuperAdmin}
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

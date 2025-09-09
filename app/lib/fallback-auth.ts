@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 
-// Dados de fallback quando o MySQL não estiver disponível
+// Dados de fallback quando o PostgreSQL não estiver disponível
 const fallbackUsers = [
   {
     id: '1',

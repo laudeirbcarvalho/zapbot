@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -24,7 +24,7 @@ model User {
   managedAttendants Attendant[] @relation("ManagerAttendants")
   tenant      Tenant?      @relation(fields: [tenantId], references: [id])
 
-  @@index([tenantId], map: "User_tenantId_fkey")
+  @@index([tenantId])
 }
 
 enum UserType {
@@ -55,10 +55,10 @@ model Lead {
   attendances Attendance[]
   ratings     Rating[]
 
-  @@index([columnId], map: "Lead_columnId_fkey")
-  @@index([attendantId], map: "Lead_attendantId_fkey")
-  @@index([createdBy], map: "Lead_createdBy_fkey")
-  @@index([deletedAt], map: "Lead_deletedAt_idx")
+  @@index([columnId])
+  @@index([attendantId])
+  @@index([createdBy])
+  @@index([deletedAt])
 }
 
 model Column {
@@ -72,7 +72,7 @@ model Column {
   deletedBy String?
   leads     Lead[]
 
-  @@index([deletedAt], map: "Column_deletedAt_idx")
+  @@index([deletedAt])
 }
 
 model Integration {
@@ -105,10 +105,10 @@ model Attendance {
   lead        Lead        @relation(fields: [leadId], references: [id], onDelete: Cascade)
   user        User?       @relation(fields: [userId], references: [id])
 
-  @@index([leadId], map: "Attendance_leadId_fkey")
-  @@index([userId], map: "Attendance_userId_fkey")
-  @@index([scheduledAt], map: "Attendance_scheduledAt_idx")
-  @@index([status], map: "Attendance_status_idx")
+  @@index([leadId])
+  @@index([userId])
+  @@index([scheduledAt])
+  @@index([status])
 }
 
 model Position {
@@ -166,10 +166,10 @@ model Attendant {
   leads        Lead[]      @relation("AttendantLeads")
   ratings      Rating[]
 
-  @@index([positionId], map: "Attendant_positionId_fkey")
-  @@index([functionId], map: "Attendant_functionId_fkey")
-  @@index([departmentId], map: "Attendant_departmentId_fkey")
-  @@index([managerId], map: "Attendant_managerId_fkey")
+  @@index([positionId])
+  @@index([functionId])
+  @@index([departmentId])
+  @@index([managerId])
 }
 
 model Rating {
@@ -185,9 +185,9 @@ model Rating {
   attendant   Attendant @relation(fields: [attendantId], references: [id], onDelete: Cascade)
   lead        Lead?     @relation(fields: [leadId], references: [id])
 
-  @@index([attendantId], map: "Rating_attendantId_fkey")
-  @@index([leadId], map: "Rating_leadId_fkey")
-  @@index([type], map: "Rating_type_idx")
+  @@index([attendantId])
+  @@index([leadId])
+  @@index([type])
 }
 
 model Tenant {
@@ -204,8 +204,8 @@ model Tenant {
   users       User[]
   settings    SystemSettings[]
 
-  @@index([slug], map: "Tenant_slug_idx")
-  @@index([domain], map: "Tenant_domain_idx")
+  @@index([slug])
+  @@index([domain])
 }
 
 model SystemSettings {
@@ -221,7 +221,7 @@ model SystemSettings {
   updatedAt   DateTime @updatedAt
   tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  @@unique([tenantId, key], map: "SystemSettings_tenantId_key_unique")
-  @@index([tenantId], map: "SystemSettings_tenantId_fkey")
-  @@index([category], map: "SystemSettings_category_idx")
+  @@unique([tenantId, key])
+  @@index([tenantId])
+  @@index([category])
 }

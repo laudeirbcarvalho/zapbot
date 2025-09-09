@@ -5,6 +5,130 @@ import { withAuth } from '@/app/lib/auth-middleware';
 
 const prisma = new PrismaClient();
 
+// Função para criar hierarquia de teste automaticamente
+async function createTestHierarchy(adminId: string, adminName: string) {
+  try {
+    console.log('🏗️ Criando hierarquia de teste para administrador:', adminName);
+    
+    // 1. Criar gerente
+    const managerPassword = await bcrypt.hash('gerente123', 12);
+    const manager = await prisma.user.create({
+      data: {
+        name: `Gerente de ${adminName}`,
+        email: `gerente.${adminId.slice(0, 8)}@zapbot.com`,
+        password: managerPassword,
+        userType: 'MANAGER',
+        isActive: true,
+        isSuperAdmin: false
+      }
+    });
+    console.log('✅ Gerente criado:', manager.name);
+
+    // 2. Buscar posição, função e departamento padrão
+    let position = await prisma.position.findFirst({ where: { name: 'Atendente' } });
+    if (!position) {
+      position = await prisma.position.create({
+        data: { name: 'Atendente', description: 'Posição de Atendente' }
+      });
+    }
+
+    let func = await prisma.function.findFirst({ where: { name: 'Atendimento' } });
+    if (!func) {
+      func = await prisma.function.create({
+        data: { name: 'Atendimento', description: 'Função de Atendimento' }
+      });
+    }
+
+    let department = await prisma.department.findFirst({ where: { name: 'Vendas' } });
+    if (!department) {
+      department = await prisma.department.create({
+        data: { name: 'Vendas', description: 'Departamento de Vendas' }
+      });
+    }
+
+    // 3. Criar atendente
+    const attendantPassword = await bcrypt.hash('atendente123', 10);
+    const attendant = await prisma.attendant.create({
+      data: {
+        name: `Atendente de ${manager.name}`,
+        email: `atendente.${adminId.slice(0, 8)}@zapbot.com`,
+        password: attendantPassword,
+        phone: '(11) 99999-9999',
+        managerId: manager.id,
+        positionId: position.id,
+        functionId: func.id,
+        departmentId: department.id,
+        startTime: '08:00',
+        endTime: '18:00',
+        workDays: 'monday,tuesday,wednesday,thursday,friday',
+        isActive: true,
+        canLogin: true
+      }
+    });
+    console.log('✅ Atendente criado:', attendant.name);
+
+    // 4. Criar colunas do kanban se não existirem
+    const columns = [
+      { title: 'Chegada', color: '#3B82F6', position: 0 },
+      { title: 'Em Atendimento', color: '#F59E0B', position: 1 },
+      { title: 'Finalizado', color: '#10B981', position: 2 }
+    ];
+
+    for (const col of columns) {
+      const existingColumn = await prisma.column.findFirst({ where: { title: col.title } });
+      if (!existingColumn) {
+        await prisma.column.create({ data: col });
+      }
+    }
+
+    const chegadaColumn = await prisma.column.findFirst({ where: { title: 'Chegada' } });
+
+    // 5. Criar lead de teste
+    const lead = await prisma.lead.create({
+      data: {
+        name: 'Cliente Teste',
+        email: `cliente.teste.${adminId.slice(0, 8)}@exemplo.com`,
+        phone: '(11) 88888-8888',
+        source: 'Website',
+        status: 'novo',
+        notes: 'Lead de teste criado automaticamente para demonstração do sistema.',
+        attendantId: attendant.id,
+        createdBy: manager.id,
+        columnId: chegadaColumn?.id || null,
+        position: 0
+      }
+    });
+    console.log('✅ Lead criado:', lead.name);
+
+    // 6. Criar atendimento inicial para o lead
+    await prisma.attendance.create({
+      data: {
+        leadId: lead.id,
+        userId: manager.id,
+        type: 'call',
+        subject: 'Primeiro Contato',
+        description: 'Atendimento inicial de demonstração. Este é um exemplo de como registrar interações com leads no sistema.',
+        status: 'completed',
+        priority: 'medium',
+        outcome: 'Lead interessado, agendar nova conversa',
+        nextAction: 'Enviar proposta comercial'
+      }
+    });
+    console.log('✅ Atendimento inicial criado');
+
+    console.log('🎉 Hierarquia de teste criada com sucesso!');
+    console.log('📋 Resumo:');
+    console.log(`   👤 Admin: ${adminName}`);
+    console.log(`   👨‍💼 Gerente: ${manager.name} (${manager.email})`);
+    console.log(`   👩‍💻 Atendente: ${attendant.name} (${attendant.email})`);
+    console.log(`   🎯 Lead: ${lead.name} (${lead.email})`);
+    console.log(`   📞 Atendimento: Primeiro Contato registrado`);
+    
+  } catch (error) {
+    console.error('❌ Erro ao criar hierarquia de teste:', error);
+  }
+}
+
 // GET - Listar todos os usuários
 export const GET = withAuth(async (request: NextRequest) => {
   try {
@@ -188,6 +312,11 @@ export const POST = withAuth(async (request: NextRequest) => {
         updatedAt: true
       }
     });
+
+    // Se for um administrador, criar hierarquia de teste automaticamente
+    if (userType === 'ADMIN') {
+      await createTestHierarchy(newUser.id, name);
+    }
 
     return NextResponse.json(newUser, { status: 201 });
   } catch (error) {

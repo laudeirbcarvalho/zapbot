@@ -197,6 +197,9 @@ export async function POST(request: NextRequest) {
         email: `gerente@${slug}.test`,
         phone: '(11) 99999-9999',
         managerId: testManager.id,
+        startTime: '08:00',
+        endTime: '18:00',
+        workDays: '1,2,3,4,5',
         isActive: true
       }
     });
