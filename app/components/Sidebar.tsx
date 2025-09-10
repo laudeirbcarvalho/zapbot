@@ -29,7 +29,7 @@ export default function Sidebar() {
     router.push('/login');
   };
 
-  const systemName = settings?.system_name || tenant?.name || 'ZapBot';
+  const systemName = settings?.system_name || tenant?.name || 'CRM';
   const logoUrl = settings?.system_logo_url;
 
   return (

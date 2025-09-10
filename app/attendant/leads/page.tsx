@@ -85,7 +85,7 @@ export default function AttendantLeadsPage() {
 
   const fetchColumns = async () => {
     try {
-      const response = await fetch("/api/columns", {
+      const response = await fetch("/api/attendant/columns", {
         credentials: "include",
       });
       if (response.ok) {

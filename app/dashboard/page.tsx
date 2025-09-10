@@ -218,7 +218,8 @@ export default function Dashboard() {
                       </div>
                       <div>
                         <div className="text-white font-medium">{attendant.name}</div>
-                        <div className="text-gray-400 text-sm">{attendant._count.assignedLeads} leads</div>
+                        <div className="text-gray-400 text-sm">{attendant.attendancesCount || 0} atendimentos</div>
+                        <div className="text-gray-500 text-xs">{attendant._count.leads} leads atribuídos</div>
                       </div>
                     </div>
                   </div>

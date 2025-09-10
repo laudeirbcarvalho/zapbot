@@ -201,7 +201,7 @@ export const GET = withAuth(async (request: NextRequest) => {
     // Estatísticas de atendentes (apenas para admin e manager)
     let attendantStats = [];
     if (isAdmin) {
-      attendantStats = await prisma.attendant.findMany({
+      const attendants = await prisma.attendant.findMany({
         where: {
           isActive: true
         },
@@ -217,9 +217,23 @@ export const GET = withAuth(async (request: NextRequest) => {
         },
         take: 10
       });
+      
+      // Buscar contagem de atendimentos para cada atendente
+      for (const attendant of attendants) {
+        const attendancesCount = await prisma.attendance.count({
+          where: {
+            lead: {
+              attendantId: attendant.id
+            }
+          }
+        });
+        attendant.attendancesCount = attendancesCount;
+      }
+      
+      attendantStats = attendants;
     } else if (isManager) {
       // Gerente vê apenas seus atendentes
-      attendantStats = await prisma.attendant.findMany({
+      const attendants = await prisma.attendant.findMany({
         where: {
           isActive: true,
           managerId: user.id
@@ -236,6 +250,20 @@ export const GET = withAuth(async (request: NextRequest) => {
         },
         take: 10
       });
+      
+      // Buscar contagem de atendimentos para cada atendente
+      for (const attendant of attendants) {
+        const attendancesCount = await prisma.attendance.count({
+          where: {
+            lead: {
+              attendantId: attendant.id
+            }
+          }
+        });
+        attendant.attendancesCount = attendancesCount;
+      }
+      
+      attendantStats = attendants;
     }
 
     const stats = {

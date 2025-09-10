@@ -18,6 +18,10 @@ interface User {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  _count?: {
+    managedAttendants: number;
+    attendantLeads: number;
+  };
 }
 
 interface Pagination {
@@ -52,10 +56,23 @@ export default function UsersPage() {
   const fetchUsers = async () => {
     try {
       setDataLoading(true);
+      
+      // Aguardar o carregamento da autenticação
+      if (isLoading) {
+        return;
+      }
+      
+      // Verificar se o usuário está autenticado
+      if (!userId) {
+        console.error('Usuário não autenticado');
+        router.push('/login');
+        return;
+      }
+      
       const token = localStorage.getItem('authToken');
       if (!token) {
         console.error('Token de autenticação não encontrado');
-        redirect('/login');
+        router.push('/login');
         return;
       }
 
@@ -77,7 +94,8 @@ export default function UsersPage() {
       
       if (response.status === 401) {
         localStorage.removeItem('authToken');
-        redirect('/login');
+        localStorage.removeItem('user');
+        router.push('/login');
         return;
       }
       
@@ -97,8 +115,10 @@ export default function UsersPage() {
   };
 
   useEffect(() => {
-    fetchUsers();
-  }, [pagination.page, searchTerm, userTypeFilter, isActiveFilter]);
+    if (!isLoading) {
+      fetchUsers();
+    }
+  }, [pagination.page, searchTerm, userTypeFilter, isActiveFilter, isLoading]);
 
   const handleDeleteUser = async (userId: string) => {
     if (!confirm('Tem certeza que deseja excluir este usuario?')) {
@@ -109,7 +129,7 @@ export default function UsersPage() {
       const token = localStorage.getItem('authToken');
       if (!token) {
         console.error('Token de autenticação não encontrado');
-        redirect('/login');
+        router.push('/login');
         return;
       }
 
@@ -123,7 +143,8 @@ export default function UsersPage() {
       
       if (response.status === 401) {
         localStorage.removeItem('authToken');
-        redirect('/login');
+        localStorage.removeItem('user');
+        router.push('/login');
         return;
       }
 
@@ -294,6 +315,12 @@ export default function UsersPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                   Status
                 </th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
+                  Atendentes
+                </th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
+                  Leads
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                   Criado em
                 </th>
@@ -329,6 +356,16 @@ export default function UsersPage() {
                       : 'bg-red-100 text-red-800'
                   }`}>
                     {getStatusLabel(user.isActive)}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-center">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    {user._count?.managedAttendants || 0}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-center">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    {user._count?.attendantLeads || 0}
                   </span>
                 </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">

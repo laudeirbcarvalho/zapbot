@@ -39,7 +39,7 @@ export default function Header({ title }: { title: string }) {
     return userType === 'ADMIN' ? 'bg-purple-500' : 'bg-blue-500';
   };
 
-  const systemName = settings?.system_name || tenant?.name || 'ZapBot';
+  const systemName = settings?.system_name || tenant?.name || 'CRM';
   const logoUrl = settings?.system_logo_url;
 
   return (

@@ -60,6 +60,12 @@ export default function LixeiraPage() {
   const fetchTrashLeads = async () => {
     try {
       setDataLoading(true);
+      
+      // Aguardar o carregamento da autenticação
+      if (isLoading) {
+        return;
+      }
+      
       const token = localStorage.getItem('authToken');
       if (!token) {
         console.error('Token de autenticação não encontrado');

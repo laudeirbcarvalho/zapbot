@@ -72,10 +72,12 @@ export default function LeadsPage() {
   
   // Atualizar status padrão quando colunas carregarem
   useEffect(() => {
-    if (columns.length > 0 && formData.status === 'novo' && !columns.find(col => col.id === 'novo')) {
+    if (columns.length > 0 && (formData.status === 'novo' || formData.status === '')) {
+      // Buscar a coluna 'Chegada' ou usar a primeira coluna
+      const chegadaColumn = columns.find(col => col.title.toLowerCase().includes('chegada')) || columns[0];
       setFormData(prev => ({
         ...prev,
-        status: columns[0].id
+        status: chegadaColumn.id
       }));
     }
   }, [columns, formData.status]);
@@ -280,12 +282,16 @@ export default function LeadsPage() {
 
   // Resetar formulário
   const resetForm = () => {
+    // Buscar a coluna 'Chegada' ou usar a primeira coluna
+    const chegadaColumn = columns.find(col => col.title.toLowerCase().includes('chegada')) || columns[0];
+    const defaultStatus = chegadaColumn ? chegadaColumn.id : 'novo';
+    
     setFormData({
       name: '',
       email: '',
       phone: '',
       source: 'Site',
-      status: columns.length > 0 ? columns[0].id : 'novo',
+      status: defaultStatus,
       notes: '',
       attendantId: ''
     });
@@ -386,14 +392,11 @@ export default function LeadsPage() {
                         {lead.attendant ? lead.attendant.name : 'Não atribuído'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-200">
-                        <span className={`px-2 py-1 rounded-full text-xs ${
-                          lead.status === "novo" ? "bg-blue-900 text-blue-200" :
-                          lead.status === "em-contato" ? "bg-yellow-900 text-yellow-200" :
-                          lead.status === "qualificado" ? "bg-purple-900 text-purple-200" :
-                          lead.status === "negociacao" ? "bg-orange-900 text-orange-200" :
-                          "bg-green-900 text-green-200"
-                        }`}>
-                          {lead.status}
+                        <span 
+                          className="px-2 py-1 rounded-full text-xs text-white"
+                          style={{ backgroundColor: column?.color || '#6B7280' }}
+                        >
+                          {column?.title || 'Sem status'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-200">

@@ -53,14 +53,14 @@ export const GET = withAttendantAuth(async (request: NextRequest, attendant) => 
       }
     });
 
-    // Mapear leads por coluna com informações da coluna
-    const columnStats = leadsByColumn.map(item => {
-      const column = columns.find(col => col.id === item.columnId);
+    // Mapear todas as colunas com contagem de leads (incluindo 0)
+    const columnStats = columns.map(column => {
+      const leadCount = leadsByColumn.find(item => item.columnId === column.id)?._count.id || 0;
       return {
-        columnId: item.columnId,
-        columnTitle: column?.title || 'Desconhecida',
-        columnColor: column?.color || '#6B7280',
-        count: item._count.id
+        columnId: column.id,
+        columnTitle: column.title,
+        columnColor: column.color,
+        count: leadCount
       };
     });
 

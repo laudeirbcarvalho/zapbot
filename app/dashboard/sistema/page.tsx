@@ -107,13 +107,10 @@ export default function SistemaPage() {
       setLoading(true);
       const { authenticatedFetch } = await import('@/app/lib/api-client');
       
-      // Carregar administradores
-      const administradoresData = await authenticatedFetch('/api/admin/tenants');
-      setAdministradores(administradoresData.tenants);
-      
-      // Carregar usuários do sistema
+      // Carregar usuários do sistema (incluindo SuperAdmin)
       const usersData = await authenticatedFetch('/api/users');
       console.log('Usuários carregados:', usersData);
+      setAdministradores(usersData.users || []);
       
       // Carregar configurações do sistema
       const settingsData = await authenticatedFetch('/api/tenant/settings');
@@ -523,13 +520,18 @@ export default function SistemaPage() {
           <div className="space-y-6">
             {/* Botão para criar novo administrador */}
             <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold">Gerenciar Administradores</h2>
-              <button
-                onClick={() => setShowNewAdministradorForm(!showNewAdministradorForm)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
-              >
-                {showNewAdministradorForm ? 'Cancelar' : 'Novo Administrador'}
-              </button>
+              <h2 className="text-xl font-semibold">Administradores e Gerentes</h2>
+              <div className="flex items-center space-x-4">
+                <div className="text-sm text-gray-400">
+                  Total: {administradores.filter(admin => admin.isSuperAdmin || admin.userType === 'ADMIN').length} administradores
+                </div>
+                <button
+                  onClick={() => setShowNewAdministradorForm(!showNewAdministradorForm)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+                >
+                  {showNewAdministradorForm ? 'Cancelar' : 'Novo Administrador'}
+                </button>
+              </div>
             </div>
             
             {/* Formulário para novo administrador */}
@@ -795,25 +797,10 @@ export default function SistemaPage() {
                         Nome
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        Email
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                         Tipo
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                        Slug
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                        Domínio
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                        Usuários
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                        Gerentes
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                        Atendentes
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                        Leads
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                         Status
@@ -827,48 +814,36 @@ export default function SistemaPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-700">
-                    {administradores.map((administrador) => (
+                    {administradores
+                      .filter((administrador) => {
+                        // Mostrar apenas Super Admins e Administradores (excluir Gerentes)
+                        return administrador.isSuperAdmin || administrador.userType === 'ADMIN';
+                      })
+                      .sort((a, b) => {
+                        // Ordenar: SuperAdmin primeiro, depois Admin
+                        if (a.isSuperAdmin && !b.isSuperAdmin) return -1;
+                        if (!a.isSuperAdmin && b.isSuperAdmin) return 1;
+                        return a.name.localeCompare(b.name);
+                      })
+                      .map((administrador) => (
                       <tr key={administrador.id} className="hover:bg-gray-700">
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-200">
                           {administrador.name}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                          {administrador.email}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                             administrador.isSuperAdmin 
                               ? 'bg-purple-900 text-purple-200' 
-                              : 'bg-blue-900 text-blue-200'
+                              : administrador.userType === 'ADMIN'
+                              ? 'bg-blue-900 text-blue-200'
+                              : 'bg-green-900 text-green-200'
                           }`}>
-                            {administrador.isSuperAdmin ? 'SuperAdmin' : 'Administrador'}
+                            {administrador.isSuperAdmin ? '🔴 SUPER ADMIN' : administrador.userType === 'ADMIN' ? '🟡 ADMINISTRADOR' : '🟢 GERENTE'}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                          <code className="bg-gray-600 px-2 py-1 rounded text-xs">
-                            /login/{administrador.slug}
-                          </code>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                          {administrador.domain ? (
-                            <code className="bg-gray-600 px-2 py-1 rounded text-xs">
-                              {administrador.domain}
-                            </code>
-                          ) : (
-                            <span className="text-gray-500">-</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                          {administrador._count.users}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                          {administrador.users?.filter(u => u.userType === 'MANAGER').length || 0}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                           {administrador.users?.reduce((total, manager) => total + (manager.managedAttendants?.length || 0), 0) || 0}
-                         </td>
-                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                           {administrador.users?.reduce((total, manager) => 
-                             total + (manager.managedAttendants?.reduce((subTotal, attendant) => 
-                               subTotal + (attendant._count?.leads || 0), 0) || 0), 0) || 0}
-                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                             administrador.isActive 
@@ -883,29 +858,31 @@ export default function SistemaPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex space-x-2">
-                            <button
-                              onClick={() => handleEditAdministrador(administrador)}
-                              className="text-blue-400 hover:text-blue-300 transition-colors"
-                              title="Editar"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                              </svg>
-                            </button>
-                            <button
-                              onClick={() => handleDeleteAdministrador(administrador.id, administrador.name, administrador.isSuperAdmin)}
-                              className={`transition-colors ${
-                                administrador.isSuperAdmin 
-                                  ? 'text-gray-500 cursor-not-allowed' 
-                                  : 'text-red-400 hover:text-red-300'
-                              }`}
-                              title={administrador.isSuperAdmin ? 'SuperAdmin não pode ser excluído' : 'Excluir'}
-                              disabled={administrador.isSuperAdmin}
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                            </button>
+                            {!administrador.isSuperAdmin && (
+                              <>
+                                <button
+                                  onClick={() => handleEditAdministrador(administrador)}
+                                  className="text-blue-400 hover:text-blue-300 transition-colors"
+                                  title="Editar"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                  </svg>
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteAdministrador(administrador.id, administrador.name, administrador.isSuperAdmin)}
+                                  className="text-red-400 hover:text-red-300 transition-colors"
+                                  title="Excluir"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              </>
+                            )}
+                            {administrador.isSuperAdmin && (
+                              <span className="text-gray-500 text-xs">Protegido</span>
+                            )}
                           </div>
                         </td>
                       </tr>

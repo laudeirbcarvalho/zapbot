@@ -17,28 +17,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Buscar atendente pelo email
-    const attendant = await prisma.attendant.findUnique({
+    const attendant = await prisma.attendant.findFirst({
       where: {
-        email: email,
+        email,
         isActive: true,
-        canLogin: true,
+        canLogin: true
       },
       include: {
         position: true,
         department: true,
-        function: true,
-      },
+        function: true
+      }
     });
 
     if (!attendant) {
       return NextResponse.json(
-        { error: "Credenciais inválidas ou acesso não autorizado" },
+        { error: "Credenciais inválidas" },
         { status: 401 }
       );
     }
 
-    // Verificar senha
     if (!attendant.password) {
       return NextResponse.json(
         { error: "Atendente não possui senha configurada" },
@@ -47,7 +45,9 @@ export async function POST(request: NextRequest) {
     }
 
     const isValidPassword = await bcrypt.compare(password, attendant.password);
+    
     if (!isValidPassword) {
+      console.log('❌ [LOGIN] Senha inválida');
       return NextResponse.json(
         { error: "Credenciais inválidas" },
         { status: 401 }

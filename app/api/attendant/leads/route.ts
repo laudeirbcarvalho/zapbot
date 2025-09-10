@@ -9,14 +9,11 @@ export const GET = withAttendantAuth(async (request: NextRequest, attendant) => 
   try {
     console.log('🔍 [API Attendant] Buscando leads para atendente:', attendant.name);
     
-    // Buscar leads atribuídos ao atendente ou não atribuídos
+    // Buscar apenas leads atribuídos ao atendente
     const leads = await prisma.lead.findMany({
       where: {
         deletedAt: null, // Apenas leads não deletados
-        OR: [
-          { attendantId: attendant.id }, // Leads atribuídos ao atendente
-          { attendantId: null } // Leads não atribuídos
-        ]
+        attendantId: attendant.id // Apenas leads atribuídos ao atendente
       },
       include: {
         attendant: {

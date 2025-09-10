@@ -25,31 +25,34 @@ export const GET = withAuth(async (request: Request) => {
         whereClause.managerId = managerId;
       }
     } else if (user.userType === 'ADMIN') {
-      // Admin vê apenas atendentes de gerentes da mesma conta
-      const managersFromSameAccount = await prisma.user.findMany({
-        where: {
-          userType: 'MANAGER',
-          accountId: user.accountId,
-          isActive: true
-        },
-        select: {
-          id: true
-        }
-      });
-      
-      const managerIds = managersFromSameAccount.map(manager => manager.id);
-      
+      // Admin vê apenas atendentes associados a ele (diretamente ou via gerentes)
       if (managerId) {
-        // Se um managerId específico foi solicitado, verificar se pertence à mesma conta
-        if (managerIds.includes(managerId)) {
+        // Verificar se o gerente pertence a este admin
+        const manager = await prisma.user.findFirst({
+          where: {
+            id: managerId,
+            userType: 'MANAGER',
+            adminId: user.id,
+            isActive: true
+          }
+        });
+        
+        if (manager) {
           whereClause.managerId = managerId;
         } else {
-          // Gerente não pertence à mesma conta, retornar vazio
+          // Gerente não pertence a este admin, retornar vazio
           whereClause.managerId = 'invalid';
         }
       } else {
-        // Filtrar por todos os gerentes da mesma conta
-        whereClause.managerId = { in: managerIds };
+        // Filtrar por atendentes associados diretamente ao admin ou via seus gerentes
+        whereClause.OR = [
+          { adminId: user.id }, // Atendentes diretamente associados ao admin
+          { 
+            manager: {
+              adminId: user.id // Atendentes de gerentes deste admin
+            }
+          }
+        ];
       }
     } else if (user.userType === 'MANAGER') {
       // Gerente vê apenas seus próprios atendentes

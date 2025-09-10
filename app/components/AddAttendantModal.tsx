@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '../hooks/useAuth';
 
 interface AddAttendantModalProps {
   onClose: () => void;
@@ -8,6 +9,7 @@ interface AddAttendantModalProps {
 }
 
 export default function AddAttendantModal({ onClose, onSuccess }: AddAttendantModalProps) {
+  const { isAdmin, userId, userType } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -76,6 +78,11 @@ export default function AddAttendantModal({ onClose, onSuccess }: AddAttendantMo
         if (managersRes.ok) {
           const managersData = await managersRes.json();
           setManagers(managersData.users || managersData);
+        }
+
+        // Se for gerente, definir automaticamente como manager do novo atendente
+        if (userType === 'MANAGER' && userId) {
+          setFormData(prev => ({ ...prev, managerId: userId }));
         }
       } catch (error) {
         console.error('Erro ao carregar dados:', error);
@@ -490,7 +497,7 @@ export default function AddAttendantModal({ onClose, onSuccess }: AddAttendantMo
                   value={formData.managerId}
                   onChange={handleInputChange}
                   required
-                  disabled={loadingData}
+                  disabled={loadingData || userType === 'MANAGER'}
                   className="w-full px-3 py-2 bg-gray-800 border border-gray-600 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">Selecione um gerente</option>

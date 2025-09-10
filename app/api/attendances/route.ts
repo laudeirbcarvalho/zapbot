@@ -7,6 +7,7 @@ const prisma = new PrismaClient();
 // GET - Listar atendimentos de um lead
 export const GET = withAuth(async (request: NextRequest) => {
   try {
+    const user = (request as any).user;
     const { searchParams } = new URL(request.url);
     const leadId = searchParams.get('leadId');
 
@@ -14,6 +15,42 @@ export const GET = withAuth(async (request: NextRequest) => {
       return NextResponse.json(
         { error: 'leadId é obrigatório' },
         { status: 400 }
+      );
+    }
+
+    // Verificar se o usuário tem permissão para ver este lead
+    let canAccessLead = false;
+    
+    if (user.isSuperAdmin) {
+      canAccessLead = true;
+    } else {
+      const lead = await prisma.lead.findUnique({
+        where: { id: leadId },
+        include: {
+          attendant: {
+            include: {
+              manager: true
+            }
+          }
+        }
+      });
+
+      if (lead) {
+        if (user.userType === 'ADMIN') {
+          // Admin pode ver se o lead pertence à sua hierarquia
+          canAccessLead = lead.attendant?.adminId === user.id || 
+                         lead.attendant?.manager?.adminId === user.id;
+        } else if (user.userType === 'MANAGER') {
+          // Gerente pode ver se o lead pertence à sua equipe
+          canAccessLead = lead.attendant?.managerId === user.id;
+        }
+      }
+    }
+
+    if (!canAccessLead) {
+      return NextResponse.json(
+        { error: 'Acesso negado' },
+        { status: 403 }
       );
     }
 

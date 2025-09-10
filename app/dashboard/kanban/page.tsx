@@ -57,6 +57,12 @@ export default function KanbanPage() {
   const loadData = async () => {
     try {
       setDataLoading(true);
+      
+      // Aguardar o carregamento da autenticação
+      if (isLoading) {
+        return;
+      }
+      
       const token = localStorage.getItem('authToken');
       if (!token) {
         console.error('❌ [Kanban] Token de autenticação não encontrado');
@@ -77,8 +83,10 @@ export default function KanbanPage() {
 
   // Carregar dados iniciais
   useEffect(() => {
-    loadData();
-  }, []);
+    if (!isLoading) {
+      loadData();
+    }
+  }, [isLoading]);
 
   // Verificar autenticação
   if (isLoading) {

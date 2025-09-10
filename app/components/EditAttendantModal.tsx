@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '../hooks/useAuth';
 
 interface Attendant {
   id: string;
@@ -30,6 +31,7 @@ interface EditAttendantModalProps {
 }
 
 export default function EditAttendantModal({ attendant, onClose, onSuccess }: EditAttendantModalProps) {
+  const { isAdmin, userId, userType } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -536,7 +538,7 @@ export default function EditAttendantModal({ attendant, onClose, onSuccess }: Ed
                   value={formData.managerId}
                   onChange={handleInputChange}
                   required
-                  disabled={loadingData}
+                  disabled={loadingData || (userType === 'MANAGER' && attendant.manager?.id === userId)}
                   className="w-full px-3 py-2 bg-gray-800 border border-gray-600 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">Selecione um gerente</option>

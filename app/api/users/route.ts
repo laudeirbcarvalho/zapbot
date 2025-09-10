@@ -150,17 +150,20 @@ export const GET = withAuth(async (request: NextRequest) => {
       // Super Admin pode ver todos os usuários
       // Não adiciona filtro adicional
     } else if (currentUser.userType === 'ADMIN') {
-      // Administradores normais podem ver apenas gerentes da mesma conta e a si mesmos
+      // Administradores podem ver apenas seus gerentes e a si mesmos
       where.OR = [
         { 
           userType: 'MANAGER',
-          accountId: currentUser.accountId // Apenas gerentes da mesma conta
+          adminId: currentUser.id // Apenas gerentes associados a este admin
         },
         { id: currentUser.id } // E a si mesmo
       ];
+    } else if (currentUser.userType === 'MANAGER') {
+      // Gerentes podem ver apenas a si mesmos
+      where.id = currentUser.id;
     } else {
-      // Gerentes não deveriam acessar esta API, mas por segurança
-      where.id = currentUser.id; // Só pode ver a si mesmo
+      // Outros tipos não deveriam acessar esta API
+      where.id = currentUser.id;
     }
     
     if (search) {
@@ -186,7 +189,7 @@ export const GET = withAuth(async (request: NextRequest) => {
       where.isActive = isActive === 'true';
     }
 
-    // Buscar usuários com paginação
+    // Buscar usuários com paginação e contagens
     const [users, total] = await Promise.all([
       prisma.user.findMany({
         where,
@@ -200,7 +203,12 @@ export const GET = withAuth(async (request: NextRequest) => {
           isSuperAdmin: true,
           isActive: true,
           createdAt: true,
-          updatedAt: true
+          updatedAt: true,
+          _count: {
+            select: {
+              managedAttendants: true
+            }
+          }
         },
         orderBy: {
           createdAt: 'desc'
@@ -209,8 +217,33 @@ export const GET = withAuth(async (request: NextRequest) => {
       prisma.user.count({ where })
     ]);
 
+    // Para cada gerente, buscar a contagem de leads dos seus atendentes
+    const usersWithLeadCounts = await Promise.all(
+      users.map(async (user) => {
+        if (user.userType === 'MANAGER') {
+          // Contar leads dos atendentes deste gerente
+          const leadCount = await prisma.lead.count({
+            where: {
+              attendant: {
+                managerId: user.id
+              }
+            }
+          });
+          
+          return {
+            ...user,
+            _count: {
+              ...user._count,
+              attendantLeads: leadCount
+            }
+          };
+        }
+        return user;
+      })
+    );
+
     return NextResponse.json({
-      users,
+      users: usersWithLeadCounts,
       pagination: {
         page,
         limit,

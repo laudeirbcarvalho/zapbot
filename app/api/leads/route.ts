@@ -21,11 +21,11 @@ export const GET = withAuth(async (request: NextRequest) => {
       // Super Admin vê todos os leads
       console.log(`🔍 [API] Super Admin ${user.name} - Buscando todos os leads`);
     } else if (user.userType === 'ADMIN') {
-      // Admin vê apenas leads de gerentes da mesma conta
-      const managersFromSameAccount = await prisma.user.findMany({
+      // Admin vê apenas leads de sua hierarquia (seus gerentes e atendentes)
+      const managersFromAdmin = await prisma.user.findMany({
         where: {
           userType: 'MANAGER',
-          accountId: user.accountId,
+          adminId: user.id,
           isActive: true
         },
         select: {
@@ -33,14 +33,19 @@ export const GET = withAuth(async (request: NextRequest) => {
         }
       });
       
-      const managerIds = managersFromSameAccount.map(manager => manager.id);
+      const managerIds = managersFromAdmin.map(manager => manager.id);
       
-      // Buscar atendentes desses gerentes
+      // Buscar atendentes deste admin (diretamente ou via gerentes)
       const teamAttendants = await prisma.attendant.findMany({
         where: {
-          managerId: {
-            in: managerIds
-          },
+          OR: [
+            { adminId: user.id }, // Atendentes diretamente associados ao admin
+            { 
+              managerId: {
+                in: managerIds // Atendentes dos gerentes deste admin
+              }
+            }
+          ],
           isActive: true
         },
         select: {
@@ -50,7 +55,7 @@ export const GET = withAuth(async (request: NextRequest) => {
       
       const teamAttendantIds = teamAttendants.map(att => att.id);
       
-      // Filtrar leads: da equipe dos gerentes da mesma conta OU não atribuídos
+      // Filtrar leads: da hierarquia do admin OU não atribuídos
       whereClause.OR = [
         {
           attendantId: {
@@ -62,9 +67,9 @@ export const GET = withAuth(async (request: NextRequest) => {
         }
       ];
       
-      console.log(`🔍 [API] Admin ${user.name} - Filtrando leads de gerentes da mesma conta (${managerIds.length} gerentes, ${teamAttendantIds.length} atendentes)`);
+      console.log(`🔍 [API] Admin ${user.name} - Filtrando leads da hierarquia (${managerIds.length} gerentes, ${teamAttendantIds.length} atendentes)`);
     } else if (user.userType === 'MANAGER') {
-      // Gerente vê apenas leads da sua equipe ou não atribuídos
+      // Gerente vê apenas leads da sua equipe
       const teamAttendants = await prisma.attendant.findMany({
         where: {
           managerId: user.id,
@@ -77,19 +82,20 @@ export const GET = withAuth(async (request: NextRequest) => {
       
       const teamAttendantIds = teamAttendants.map(att => att.id);
       
-      // Filtrar leads: da equipe OU não atribuídos
-      whereClause.OR = [
-        {
-          attendantId: {
-            in: teamAttendantIds
-          }
-        },
-        {
-          attendantId: null // Leads não atribuídos
-        }
-      ];
+      // Limpar qualquer OR clause anterior
+      delete whereClause.OR;
       
-      console.log(`🔍 [API] Gerente ${user.name} - Filtrando leads da equipe (${teamAttendantIds.length} atendentes) + não atribuídos`);
+      if (teamAttendantIds.length > 0) {
+        // Filtrar leads apenas da equipe (sem leads não atribuídos)
+        whereClause.attendantId = {
+          in: teamAttendantIds
+        };
+      } else {
+        // Se não tem atendentes, não vê nenhum lead
+        whereClause.id = 'invalid'; // Força resultado vazio
+      }
+      
+      console.log(`🔍 [API] Gerente ${user.name} - Filtrando leads da equipe (${teamAttendantIds.length} atendentes) - APENAS da equipe`);
     } else {
       console.log(`🔍 [API] Usuário ${user.name} - Sem permissão para ver leads`);
       whereClause.id = 'invalid'; // Força resultado vazio
@@ -144,9 +150,9 @@ export const POST = withAuth(async (request: NextRequest) => {
       );
     }
 
-    if (!status || status === 'novo') {
+    if (!status) {
       return NextResponse.json(
-        { error: "Status deve ser o nome do quadro, não pode ser 'novo'" },
+        { error: "Status é obrigatório" },
         { status: 400 }
       );
     }

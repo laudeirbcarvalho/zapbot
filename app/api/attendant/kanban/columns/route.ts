@@ -15,10 +15,7 @@ export const GET = withAttendantAuth(async (request: NextRequest, attendant) => 
         leads: {
           where: {
             deletedAt: null,
-            OR: [
-              { attendantId: attendant.id }, // Leads atribuídos ao atendente
-              { attendantId: null } // Leads não atribuídos
-            ]
+            attendantId: attendant.id // Apenas leads atribuídos ao atendente
           },
           include: {
             attendant: {
