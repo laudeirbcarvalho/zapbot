@@ -21,6 +21,10 @@ interface User {
   _count?: {
     managedAttendants: number;
     attendantLeads: number;
+    managers: number;
+    attendants: number;
+    leads: number;
+    attendances: number;
   };
 }
 
@@ -81,7 +85,6 @@ export default function UsersPage() {
         limit: pagination.limit.toString(),
         ...(searchTerm && { search: searchTerm }),
         ...(userTypeFilter && { userType: userTypeFilter }),
-        userType: 'MANAGER', // Apenas gerentes na página de usuários
         ...(isActiveFilter && { isActive: isActiveFilter })
       });
 
@@ -194,7 +197,7 @@ export default function UsersPage() {
   if (isLoading) {
     return (
       <div className="p-6">
-        <Header title="Gerentes" />
+        <Header title="Usuários" />
         <div className="mt-6 text-center">
           <p>Carregando...</p>
         </div>
@@ -205,7 +208,7 @@ export default function UsersPage() {
   if (!userId || !isAdmin) {
     return (
       <div className="p-6">
-        <Header title="Gerentes" />
+        <Header title="Usuários" />
         <div className="mt-6 text-center">
           <div className="bg-red-900 text-red-200 p-4 rounded-md">
             <h2 className="text-xl font-semibold mb-2">Acesso Negado</h2>
@@ -219,7 +222,7 @@ export default function UsersPage() {
   if (dataLoading) {
     return (
       <div className="p-6">
-        <Header title="Gerentes" />
+        <Header title="Usuários" />
         <div className="flex justify-center items-center h-64 mt-6">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
           </div>
@@ -230,7 +233,7 @@ export default function UsersPage() {
   if (error) {
     return (
       <div className="p-6">
-        <Header title="Gerentes" />
+        <Header title="Usuários" />
         <div className="bg-red-900 text-red-200 p-4 rounded-md mt-6">
           <strong>Erro:</strong> {error}
         </div>
@@ -243,14 +246,14 @@ export default function UsersPage() {
       <Header title="Usuários" />
       <div className="space-y-6 mt-6">
         <div className="flex justify-between items-center">
-          <h2 className="text-xl font-semibold text-white">Lista de Gerentes</h2>
+          <h2 className="text-xl font-semibold text-white">Lista de Usuários</h2>
           {isAdmin && (
             <button
               onClick={() => setShowAddModal(true)}
               className="px-4 py-2 rounded-md flex items-center gap-2 transition-colors bg-blue-600 hover:bg-blue-700 text-white"
             >
               <PlusIcon className="h-5 w-5" />
-              Novo Gerente
+              Novo Usuário
             </button>
           )}
         </div>
@@ -280,6 +283,7 @@ export default function UsersPage() {
               >
                 <option value="">Todos</option>
                 <option value="MANAGER">Gerente</option>
+                <option value="ADMIN">Administrador</option>
               </select>
             </div>
             <div>
@@ -360,12 +364,12 @@ export default function UsersPage() {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-center">
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    {user._count?.managedAttendants || 0}
+                    {user._count?.attendants || 0}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-center">
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    {user._count?.attendantLeads || 0}
+                    {user._count?.leads || 0}
                   </span>
                 </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
@@ -389,7 +393,7 @@ export default function UsersPage() {
                         <PencilIcon className="h-5 w-5" />
                       </button>
                     )}
-                    {isAdmin && (
+                    {isAdmin && !user.isSuperAdmin && (
                       <button
                         onClick={() => handleDeleteUser(user.id)}
                         className="transition-colors text-red-600 hover:text-red-900"

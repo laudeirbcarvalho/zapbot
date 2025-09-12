@@ -3,25 +3,22 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../hooks/useAuth";
-import { useTenant } from "../hooks/useTenant";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: "📊", adminOnly: false, superAdminOnly: false },
   { name: "Leads", href: "/dashboard/leads", icon: "👥", adminOnly: false, superAdminOnly: false },
   { name: "Kanban", href: "/dashboard/kanban", icon: "📋", adminOnly: false, superAdminOnly: false },
   { name: "Atendentes", href: "/dashboard/attendants", icon: "👨‍💼", adminOnly: false, superAdminOnly: false },
-  { name: "Gerentes", href: "/dashboard/usuarios", icon: "👤", adminOnly: true, superAdminOnly: false },
+  { name: "Usuários", href: "/dashboard/usuarios", icon: "👤", adminOnly: true, superAdminOnly: false },
   { name: "Lixeira", href: "/dashboard/lixeira", icon: "🗑️", adminOnly: false, superAdminOnly: false },
   { name: "Integrações", href: "/dashboard/integracoes", icon: "🔄", adminOnly: true, superAdminOnly: false },
   { name: "Configurações", href: "/dashboard/configuracoes", icon: "⚙️", adminOnly: true, superAdminOnly: false },
-  { name: "Sistema", href: "/dashboard/sistema", icon: "🔧", adminOnly: false, superAdminOnly: true },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { isAdmin, isSuperAdmin } = useAuth();
-  const { tenant, settings } = useTenant();
 
   const handleLogout = () => {
     localStorage.removeItem('authToken');
@@ -29,8 +26,8 @@ export default function Sidebar() {
     router.push('/login');
   };
 
-  const systemName = settings?.system_name || tenant?.name || 'CRM';
-  const logoUrl = settings?.system_logo_url;
+  const systemName = 'ZapBot CRM';
+  const logoUrl = null; // Logo será configurado via sistema de configurações
 
   return (
     <div className="flex flex-col h-full bg-gray-900 text-white w-64 p-4">

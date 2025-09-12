@@ -16,8 +16,11 @@ export const GET = withAuth(async (request: NextRequest) => {
     const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    // Base filter - Admin vê tudo, Manager vê apenas seus leads e de seus atendentes
-    let baseFilter = {};
+    // Base filter - filtrar por tenant e permissões de usuário
+    let baseFilter: any = {};
+    
+    // Filtrar por tenant se não for Super Admin
+    // Removido filtro por tenantId - sistema single-tenant
     
     if (!isAdmin) {
       if (isManager) {
@@ -30,6 +33,7 @@ export const GET = withAuth(async (request: NextRequest) => {
         
         if (attendantIds.length > 0) {
           baseFilter = {
+            ...baseFilter,
             OR: [
               { attendantId: { in: attendantIds } },
               { createdBy: user.id }
@@ -38,6 +42,7 @@ export const GET = withAuth(async (request: NextRequest) => {
         } else {
           // Se não tem atendentes, só mostra leads criados pelo próprio gerente
           baseFilter = {
+            ...baseFilter,
             createdBy: user.id
           };
         }
@@ -46,6 +51,7 @@ export const GET = withAuth(async (request: NextRequest) => {
       } else {
         // Atendente vê apenas seus próprios leads
         baseFilter = {
+          ...baseFilter,
           OR: [
             { attendantId: user.id },
             { createdBy: user.id }

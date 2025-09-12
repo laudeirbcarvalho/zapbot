@@ -145,6 +145,8 @@ export const GET = withAuth(async (request: NextRequest) => {
     // Construir filtros
     const where: any = {};
     
+    // Removido filtro por tenantId - sistema single-tenant
+    
     // Filtrar baseado no tipo de usuário logado
     if (currentUser.isSuperAdmin) {
       // Super Admin pode ver todos os usuários
@@ -205,10 +207,12 @@ export const GET = withAuth(async (request: NextRequest) => {
           createdAt: true,
           updatedAt: true,
           _count: {
-            select: {
-              managedAttendants: true
-            }
+          select: {
+            managedAttendants: true,
+            createdLeads: true,
+            attendances: true
           }
+        }
         },
         orderBy: {
           createdAt: 'desc'
@@ -217,12 +221,68 @@ export const GET = withAuth(async (request: NextRequest) => {
       prisma.user.count({ where })
     ]);
 
-    // Para cada gerente, buscar a contagem de leads dos seus atendentes
-    const usersWithLeadCounts = await Promise.all(
+    // Para cada usuário, calcular contadores específicos
+    const usersWithCounts = await Promise.all(
       users.map(async (user) => {
-        if (user.userType === 'MANAGER') {
-          // Contar leads dos atendentes deste gerente
-          const leadCount = await prisma.lead.count({
+        let managers = 0;
+        let attendants = 0;
+        let leads = 0;
+        let attendances = 0;
+
+        if (user.isSuperAdmin) {
+          // Super Admin vê todos os dados do sistema
+          managers = await prisma.user.count({ where: { userType: 'MANAGER' } });
+          attendants = await prisma.attendant.count();
+          leads = await prisma.lead.count();
+          attendances = await prisma.attendance.count();
+        } else if (user.userType === 'ADMIN') {
+          // Administrador vê apenas seus gerentes e dados relacionados
+          managers = await prisma.user.count({ 
+            where: { 
+              userType: 'MANAGER',
+              adminId: user.id 
+            } 
+          });
+          
+          // Contar atendentes dos gerentes deste admin
+          attendants = await prisma.attendant.count({
+            where: {
+              manager: {
+                adminId: user.id
+              }
+            }
+          });
+          
+          // Contar leads dos atendentes dos gerentes deste admin
+          leads = await prisma.lead.count({
+            where: {
+              attendant: {
+                manager: {
+                  adminId: user.id
+                }
+              }
+            }
+          });
+          
+          // Contar atendimentos dos leads dos atendentes dos gerentes deste admin
+          attendances = await prisma.attendance.count({
+            where: {
+              lead: {
+                attendant: {
+                  manager: {
+                    adminId: user.id
+                  }
+                }
+              }
+            }
+          });
+        } else if (user.userType === 'MANAGER') {
+          // Gerente vê apenas seus atendentes e dados relacionados
+          attendants = await prisma.attendant.count({
+            where: { managerId: user.id }
+          });
+          
+          leads = await prisma.lead.count({
             where: {
               attendant: {
                 managerId: user.id
@@ -230,20 +290,32 @@ export const GET = withAuth(async (request: NextRequest) => {
             }
           });
           
-          return {
-            ...user,
-            _count: {
-              ...user._count,
-              attendantLeads: leadCount
+          attendances = await prisma.attendance.count({
+            where: {
+              lead: {
+                attendant: {
+                  managerId: user.id
+                }
+              }
             }
-          };
+          });
         }
-        return user;
+        
+        return {
+          ...user,
+          _count: {
+            ...user._count,
+            managers,
+            attendants,
+            leads,
+            attendances
+          }
+        };
       })
     );
 
     return NextResponse.json({
-      users: usersWithLeadCounts,
+      users: usersWithCounts,
       pagination: {
         page,
         limit,

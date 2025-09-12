@@ -19,6 +19,8 @@ export const GET = withAuth(async (request: Request) => {
       deletedAt: null, // Apenas leads não deletados
     };
     
+    // Removido filtro por tenantId - sistema single-tenant
+    
     if (isManager) {
       // Gerente vê apenas leads de seus atendentes
       const attendants = await prisma.attendant.findMany({
@@ -41,10 +43,15 @@ export const GET = withAuth(async (request: Request) => {
     }
     // Admin vê todos os leads (sem filtro adicional)
 
+    // Definir filtro para colunas
+    let columnsFilter: any = {
+      deletedAt: null, // Apenas colunas não deletadas
+    };
+    
+    // Removido filtro por tenantId - sistema single-tenant
+    
     const columns = await prisma.column.findMany({
-      where: {
-        deletedAt: null, // Apenas colunas não deletadas
-      },
+      where: columnsFilter,
       include: {
         leads: {
           where: leadsFilter,

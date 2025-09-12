@@ -77,12 +77,31 @@ export default function AddAttendantModal({ onClose, onSuccess }: AddAttendantMo
 
         if (managersRes.ok) {
           const managersData = await managersRes.json();
-          setManagers(managersData.users || managersData);
-        }
-
-        // Se for gerente, definir automaticamente como manager do novo atendente
-        if (userType === 'MANAGER' && userId) {
-          setFormData(prev => ({ ...prev, managerId: userId }));
+          let managersList = managersData.users || managersData;
+          
+          // Se for gerente, garantir que ele esteja na lista e seja o único disponível
+          if (userType === 'MANAGER' && userId) {
+            // Obter nome do usuário logado do storage
+            const userData = sessionStorage.getItem('user') || localStorage.getItem('user');
+            let currentUserName = 'Gerente Atual';
+            if (userData) {
+              try {
+                const user = JSON.parse(userData);
+                currentUserName = user.name || 'Gerente Atual';
+              } catch (e) {
+                console.error('Erro ao parsear dados do usuário:', e);
+              }
+            }
+            
+            const currentUserData = {
+              id: userId,
+              name: currentUserName
+            };
+            managersList = [currentUserData];
+            setFormData(prev => ({ ...prev, managerId: userId }));
+          }
+          
+          setManagers(managersList);
         }
       } catch (error) {
         console.error('Erro ao carregar dados:', error);
@@ -500,7 +519,7 @@ export default function AddAttendantModal({ onClose, onSuccess }: AddAttendantMo
                   disabled={loadingData || userType === 'MANAGER'}
                   className="w-full px-3 py-2 bg-gray-800 border border-gray-600 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
-                  <option value="">Selecione um gerente</option>
+                  {userType !== 'MANAGER' && <option value="">Selecione um gerente</option>}
                   {managers.map(manager => (
                     <option key={manager.id} value={manager.id}>
                       {manager.name}

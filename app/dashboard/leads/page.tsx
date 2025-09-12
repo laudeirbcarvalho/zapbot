@@ -58,6 +58,12 @@ export default function LeadsPage() {
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
   const [currentLead, setCurrentLead] = useState<Lead | null>(null);
+  const [sourceFilter, setSourceFilter] = useState<string>('all');
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importLoading, setImportLoading] = useState(false);
+  const [showDuplicatesModal, setShowDuplicatesModal] = useState(false);
+  const [duplicatesData, setDuplicatesData] = useState<any>(null);
   
   // Form states
   const [formData, setFormData] = useState({
@@ -77,7 +83,7 @@ export default function LeadsPage() {
       const chegadaColumn = columns.find(col => col.title.toLowerCase().includes('chegada')) || columns[0];
       setFormData(prev => ({
         ...prev,
-        status: chegadaColumn.id
+        status: 'chegada' // Status deve ser 'chegada', não o ID da coluna
       }));
     }
   }, [columns, formData.status]);
@@ -202,9 +208,19 @@ export default function LeadsPage() {
   const handleAddLead = async () => {
     try {
       const { authenticatedFetch } = await import('@/app/lib/api-client');
+      
+      // Buscar a coluna 'Chegada' para definir o columnId
+      const chegadaColumn = columns.find(col => col.title.toLowerCase().includes('chegada')) || columns[0];
+      
+      const leadData = {
+        ...formData,
+        columnId: chegadaColumn?.id || null, // Definir columnId corretamente
+        status: 'chegada' // Status deve ser 'chegada'
+      };
+      
       await authenticatedFetch('/api/leads', {
         method: 'POST',
-        body: formData,
+        body: leadData,
       });
 
       await fetchLeads();
@@ -317,6 +333,155 @@ export default function LeadsPage() {
     }
   };
 
+  // Manipular importação de Excel
+  const handleImportExcel = async () => {
+    if (!importFile) {
+      alert('Por favor, selecione um arquivo Excel para importar.');
+      return;
+    }
+
+    try {
+      setImportLoading(true);
+      console.log('🚀 Iniciando importação do arquivo:', importFile.name);
+      
+      const formData = new FormData();
+      formData.append('file', importFile);
+
+      const { authenticatedFetch } = await import('@/app/lib/api-client');
+      console.log('📤 Enviando requisição para API de importação...');
+      
+      const result = await authenticatedFetch('/api/leads/import', {
+        method: 'POST',
+        body: formData,
+      });
+      console.log('✅ Resultado da importação:', result);
+      
+      // Verificar se requer confirmação para duplicatas
+      if (result.requiresConfirmation) {
+        setDuplicatesData(result);
+        setShowDuplicatesModal(true);
+        setImportLoading(false);
+        return;
+      }
+      
+      // Mostrar resultado da importação
+      const { imported = 0, skipped = 0, total = 0 } = result;
+      const successMessage = `Importação concluída com sucesso!\n\n` +
+        `📊 Resumo:\n` +
+        `• Total de registros processados: ${total}\n` +
+        `• Leads importados: ${imported}\n` +
+        `• Leads ignorados (duplicados): ${skipped}`;
+      
+      alert(successMessage);
+      
+      // Recarregar a lista de leads
+      console.log('🔄 Recarregando lista de leads...');
+      await fetchLeads();
+      
+      // Fechar modal e limpar arquivo
+      setShowImportModal(false);
+      setImportFile(null);
+      
+      console.log('✅ Importação finalizada com sucesso!');
+      
+    } catch (error) {
+      console.error('💥 Erro na importação:', error);
+      
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      
+      alert(`❌ Falha na Importação\n\n` +
+        `Erro: ${errorMessage}\n\n` +
+        `💡 Dicas:\n` +
+        `• Verifique se o arquivo Excel está no formato correto\n` +
+        `• Certifique-se de que as colunas estão na ordem: Nome, Email, Telefone, Origem\n` +
+        `• Tente novamente ou contate o suporte`);
+        
+    } finally {
+      setImportLoading(false);
+      console.log('🏁 Processo de importação finalizado.');
+    }
+  };
+
+  // Confirmar importação de duplicatas
+  const handleConfirmImport = async () => {
+    if (!importFile) return;
+
+    try {
+      setImportLoading(true);
+      console.log('🚀 Confirmando importação forçada...');
+      
+      const formData = new FormData();
+      formData.append('file', importFile);
+      formData.append('forceImport', 'true');
+
+      const { authenticatedFetch } = await import('@/app/lib/api-client');
+      
+      const result = await authenticatedFetch('/api/leads/import/confirm', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      // Mostrar resultado da importação
+      const { imported = 0, skipped = 0, total = 0 } = result;
+      const successMessage = `Importação forçada concluída!\n\n` +
+        `📊 Resumo:\n` +
+        `• Total de registros processados: ${total}\n` +
+        `• Leads importados: ${imported}\n` +
+        `• Leads ignorados: ${skipped}`;
+      
+      alert(successMessage);
+      
+      // Recarregar a lista de leads
+      await fetchLeads();
+      
+      // Fechar modais e limpar arquivo
+      setShowDuplicatesModal(false);
+      setShowImportModal(false);
+      setImportFile(null);
+      setDuplicatesData(null);
+      
+    } catch (error) {
+      console.error('💥 Erro na importação forçada:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      alert(`❌ Falha na Importação Forçada\n\n${errorMessage}`);
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  // Cancelar importação de duplicatas
+  const handleCancelImport = () => {
+    setShowDuplicatesModal(false);
+    setDuplicatesData(null);
+    setImportLoading(false);
+  };
+
+  // Baixar planilha de exemplo
+  const handleDownloadExample = () => {
+    // Criar dados de exemplo
+    const exampleData = [
+      ['Nome', 'Email', 'Telefone', 'Origem'],
+      ['João Silva', 'joao@email.com', '(11) 99999-9999', 'Site'],
+      ['Maria Santos', 'maria@email.com', '(11) 88888-8888', 'WhatsApp'],
+      ['Pedro Costa', 'pedro@email.com', '(11) 77777-7777', 'Facebook']
+    ];
+
+    // Criar CSV
+    const csvContent = exampleData.map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'exemplo-leads.csv');
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
   // Redireciona para login se não estiver autenticado
   if (status === "unauthenticated") {
     redirect("/login");
@@ -329,12 +494,44 @@ export default function LeadsPage() {
       <div className="mt-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">Lista de Leads</h2>
-          <button 
-            onClick={openAddModal}
-            className="px-4 py-2 rounded-md text-white bg-blue-600 hover:bg-blue-700"
+          <div className="flex gap-2 items-center">
+             <button 
+               onClick={() => setShowImportModal(true)}
+               className="px-4 py-2 rounded-md text-white bg-green-600 hover:bg-green-700"
+             >
+               Importar Excel
+             </button>
+             <a
+               href="/api/leads/example"
+               download="exemplo-leads.xlsx"
+               className="px-3 py-2 text-sm rounded-md text-green-600 border border-green-600 hover:bg-green-50 hover:text-green-700 transition-colors"
+             >
+               📥 Baixar Exemplo
+             </a>
+             <button 
+               onClick={openAddModal}
+               className="px-4 py-2 rounded-md text-white bg-blue-600 hover:bg-blue-700"
+             >
+               Adicionar Lead
+             </button>
+           </div>
+        </div>
+        
+        {/* Filtro por origem */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-2">Filtrar por origem:</label>
+          <select
+            value={sourceFilter}
+            onChange={(e) => setSourceFilter(e.target.value)}
+            className="p-2 bg-gray-700 border border-gray-600 rounded-md"
           >
-            Adicionar Lead
-          </button>
+            <option value="all">Todas as origens</option>
+            <option value="Site">Site</option>
+            <option value="WhatsApp">WhatsApp</option>
+            <option value="Facebook">Facebook</option>
+            <option value="Instagram">Instagram</option>
+            <option value="Indicação">Indicação</option>
+          </select>
         </div>
         
         {error && (
@@ -357,20 +554,21 @@ export default function LeadsPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Email</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Telefone</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Origem</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Data Cadastro</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Atendente</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-700">
-                {leads.length === 0 ? (
+                {leads.filter(lead => sourceFilter === 'all' || lead.source === sourceFilter).length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-4 text-center text-gray-400">
+                    <td colSpan={8} className="px-6 py-4 text-center text-gray-400">
                       Nenhum lead encontrado. Adicione um novo lead.
                     </td>
                   </tr>
                 ) : (
-                  leads.map((lead) => {
+                  leads.filter(lead => sourceFilter === 'all' || lead.source === sourceFilter).map((lead) => {
                     const column = columns.find(col => col.id === lead.columnId);
                     const backgroundColor = column?.color ? `${column.color}20` : 'transparent';
                     const borderColor = column?.color || 'transparent';
@@ -388,6 +586,9 @@ export default function LeadsPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-200">{lead.email}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-200">{lead.phone}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-200">{lead.source}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-200">
+                        {new Date(lead.createdAt).toLocaleDateString('pt-BR')}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-200">
                         {lead.attendant ? lead.attendant.name : 'Não atribuído'}
                       </td>
@@ -422,6 +623,79 @@ export default function LeadsPage() {
           </div>
         )}
       </div>
+
+      {/* Modal para confirmar importação de duplicatas */}
+      {showDuplicatesModal && duplicatesData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <h3 className="text-xl font-semibold mb-4 text-red-600">⚠️ Leads Duplicados Encontrados</h3>
+            
+            <div className="mb-4">
+              <p className="text-gray-700 mb-2">
+                Foram encontrados <strong>{duplicatesData.duplicates?.length || 0} leads duplicados</strong> que podem ser importados 
+                porque pertencem a uma hierarquia diferente.
+              </p>
+              <p className="text-sm text-gray-600 mb-4">
+                Deseja prosseguir com a importação mesmo assim?
+              </p>
+            </div>
+
+            {/* Lista de duplicatas */}
+            <div className="mb-6">
+              <h4 className="font-medium mb-2">Leads que serão duplicados:</h4>
+              <div className="max-h-40 overflow-y-auto border rounded p-2 bg-gray-50">
+                {duplicatesData.duplicates?.map((duplicate: any, index: number) => (
+                  <div key={index} className="py-1 px-2 border-b last:border-b-0 text-sm">
+                    <span className="font-medium">{duplicate.name}</span>
+                    {duplicate.phone !== 'Sem telefone' && (
+                      <span className="text-gray-600 ml-2">📱 {duplicate.phone}</span>
+                    )}
+                    {duplicate.email !== 'Sem email' && (
+                      <span className="text-gray-600 ml-2">✉️ {duplicate.email}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Resumo atual */}
+            <div className="mb-6 p-3 bg-blue-50 rounded">
+              <h4 className="font-medium mb-2">📊 Resumo da Importação:</h4>
+              <div className="text-sm text-gray-700">
+                <p>• Total de registros: {duplicatesData.total}</p>
+                <p>• Já importados: {duplicatesData.imported}</p>
+                <p>• Ignorados (mesma hierarquia): {duplicatesData.skipped}</p>
+                <p>• Duplicatas que podem ser importadas: {duplicatesData.duplicates?.length || 0}</p>
+              </div>
+            </div>
+
+            {/* Botões de ação */}
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={handleCancelImport}
+                disabled={importLoading}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 hover:border-gray-400 rounded-md"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmImport}
+                disabled={importLoading}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md flex items-center"
+              >
+                {importLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Importando...
+                  </>
+                ) : (
+                  'Sim, Importar Mesmo Assim'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal para adicionar/editar lead */}
       {showModal && (
@@ -542,6 +816,65 @@ export default function LeadsPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para importar Excel */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 p-6 rounded-lg w-full max-w-md">
+            <h3 className="text-xl font-semibold mb-4">Importar Leads do Excel</h3>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">
+                Selecione o arquivo Excel (.xlsx, .xls)
+              </label>
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+              />
+            </div>
+            
+            <div className="mb-4 p-3 bg-gray-700 rounded-md">
+              <p className="text-sm text-gray-300 mb-2">Formato esperado do Excel:</p>
+              <ul className="text-xs text-gray-400 space-y-1">
+                <li>• Coluna A: Nome (obrigatório)</li>
+                <li>• Coluna B: Email (obrigatório)</li>
+                <li>• Coluna C: Telefone (obrigatório)</li>
+                <li>• Coluna D: Origem</li>
+              </ul>
+              <button
+                type="button"
+                onClick={handleDownloadExample}
+                className="mt-2 px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 rounded-md text-white"
+              >
+                Baixar Planilha de Exemplo
+              </button>
+            </div>
+            
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowImportModal(false);
+                  setImportFile(null);
+                }}
+                className="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-md"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleImportExcel}
+                disabled={!importFile || importLoading}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-md"
+              >
+                {importLoading ? 'Importando...' : 'Importar'}
+              </button>
+            </div>
           </div>
         </div>
       )}

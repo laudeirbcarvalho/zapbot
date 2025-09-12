@@ -194,13 +194,11 @@ export default function EditUserModal({ user, onClose, onSuccess }: EditUserModa
                   name="userType"
                   value={formData.userType}
                   onChange={handleInputChange}
-                  disabled={user.isSuperAdmin || user.userType === 'ADMIN'} // Super Admin e Admin não podem ter tipo alterado
+                  disabled={user.isSuperAdmin} // Apenas Super Admin não pode ter tipo alterado
                   className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <option value="MANAGER">Gerente</option>
-                  {user.userType === 'ADMIN' && (
-                    <option value="ADMIN">Administrador</option>
-                  )}
+                  <option value="ADMIN">Administrador</option>
                 </select>
                 {user.isSuperAdmin && (
                   <p className="text-xs text-gray-400 mt-1">

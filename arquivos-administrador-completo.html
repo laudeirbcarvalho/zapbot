@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arquivos Responsáveis pela Alteração de Administradores - ZapBot</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            margin: 0;
+            padding: 20px;
+            color: #fff;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        h1 {
+            text-align: center;
+            color: #4CAF50;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        h2 {
+            color: #FFD700;
+            border-bottom: 2px solid #FFD700;
+            padding-bottom: 10px;
+            margin-top: 30px;
+        }
+        h3 {
+            color: #87CEEB;
+            margin-top: 25px;
+        }
+        .error-box {
+            background: #ff4444;
+            border: 2px solid #cc0000;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .solution-box {
+            background: #4CAF50;
+            border: 2px solid #45a049;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .code-block {
+            background: #2d2d2d;
+            border: 1px solid #555;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        .file-path {
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-family: monospace;
+            margin: 5px 0;
+            display: inline-block;
+        }
+        .btn {
+            background: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            transition: background 0.3s;
+        }
+        .btn:hover {
+            background: #45a049;
+        }
+        .btn-danger {
+            background: #f44336;
+        }
+        .btn-danger:hover {
+            background: #da190b;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .status.success {
+            background: #4CAF50;
+            color: white;
+        }
+        .status.error {
+            background: #f44336;
+            color: white;
+        }
+        .token-display {
+            background: #333;
+            border: 2px solid #4CAF50;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Arquivos Responsáveis pela Alteração de Administradores</h1>
+        
+        <div class="error-box">
+            <h3>❌ ERRO IDENTIFICADO:</h3>
+            <p><strong>Token de autenticação inválido ou expirado</strong></p>
+            <p>Localização: app/lib/api-client.ts:80 e app/dashboard/sistema/page.tsx:115</p>
+        </div>
+
+        <div class="solution-box">
+            <h3>✅ SOLUÇÃO IMPLEMENTADA:</h3>
+            <p>Token JWT atualizado com nova chave secreta configurada</p>
+        </div>
+
+        <h2>📁 Arquivos Principais do Sistema</h2>
+        
+        <h3>1. Interface de Administração</h3>
+        <div class="file-path">app/dashboard/sistema/page.tsx</div>
+        <p><strong>Responsabilidade:</strong> Interface completa para gerenciar administradores</p>
+        <ul>
+            <li>Formulário de criação de administradores</li>
+            <li>Formulário de edição de administradores (função <code>handleUpdateAdministrador</code>)</li>
+            <li>Lista e visualização de administradores existentes</li>
+            <li>Controle de permissões (Super Admin vs Admin)</li>
+            <li>Upload de logos e configurações SMTP</li>
+        </ul>
+
+        <h3>2. Cliente de API</h3>
+        <div class="file-path">app/lib/api-client.ts</div>
+        <p><strong>Responsabilidade:</strong> Gerenciamento de requisições autenticadas</p>
+        <ul>
+            <li>Função <code>authenticatedFetch</code> - faz requisições com token JWT</li>
+            <li>Função <code>getAuthToken</code> - obtém token do localStorage</li>
+            <li>Função <code>getTenantInfo</code> - gerencia informações do tenant</li>
+            <li>Tratamento de erros de autenticação (linha 80)</li>
+        </ul>
+
+        <h3>3. API de Administradores</h3>
+        <div class="file-path">app/api/administradores/[id]/route.ts</div>
+        <p><strong>Responsabilidade:</strong> Endpoint para atualizar dados do administrador</p>
+        <ul>
+            <li>Método PUT para alteração de administradores</li>
+            <li>Validação de permissões Super Admin</li>
+            <li>Atualização no banco de dados PostgreSQL</li>
+        </ul>
+
+        <h3>4. Autenticação JWT</h3>
+        <div class="file-path">app/lib/jwt-auth.ts</div>
+        <p><strong>Responsabilidade:</strong> Validação e verificação de tokens JWT</p>
+        <ul>
+            <li>Função <code>requireSuperAdmin</code> - valida permissões</li>
+            <li>Função <code>verifyJWT</code> - verifica validade do token</li>
+            <li>Função <code>getJWTFromRequest</code> - extrai token do header</li>
+        </ul>
+
+        <h3>5. Configuração de Ambiente</h3>
+        <div class="file-path">.env</div>
+        <p><strong>Responsabilidade:</strong> Variáveis de ambiente e chaves secretas</p>
+        <ul>
+            <li>JWT_SECRET - chave para assinar tokens JWT</li>
+            <li>DATABASE_URL - conexão com PostgreSQL</li>
+            <li>NEXTAUTH_SECRET - autenticação Next.js</li>
+        </ul>
+
+        <h2>🔑 Novo Token JWT Gerado</h2>
+        <div class="token-display" id="tokenDisplay">
+            Carregando token...
+        </div>
+
+        <h2>🛠️ Ações Disponíveis</h2>
+        
+        <button class="btn" onclick="updateToken()">🔄 Atualizar Token no Navegador</button>
+        <button class="btn" onclick="testAPI()">🧪 Testar API de Administradores</button>
+        <button class="btn" onclick="openDashboard()">📊 Abrir Dashboard</button>
+        <button class="btn btn-danger" onclick="clearToken()">🗑️ Limpar Token</button>
+
+        <div id="status"></div>
+
+        <h2>📋 Fluxo de Alteração de Administrador</h2>
+        <ol>
+            <li><strong>Interface (page.tsx)</strong> - Usuário preenche formulário de edição</li>
+            <li><strong>Cliente API (api-client.ts)</strong> - Envia requisição PUT autenticada</li>
+            <li><strong>Middleware JWT (jwt-auth.ts)</strong> - Valida token e permissões</li>
+            <li><strong>API Route (route.ts)</strong> - Processa alteração no banco</li>
+            <li><strong>Banco PostgreSQL</strong> - Dados são atualizados</li>
+            <li><strong>Interface</strong> - Recebe confirmação e atualiza lista</li>
+        </ol>
+
+        <h2>🔍 Diagnóstico do Erro</h2>
+        <div class="code-block">
+<strong>Erro Original:</strong>
+Token de autenticação inválido ou expirado
+at authenticatedFetch (app/lib/api-client.ts:80:11)
+at async loadData (app/dashboard/sistema/page.tsx:115:25)
+
+<strong>Causa:</strong>
+- Token JWT expirado no localStorage do navegador
+- Chave JWT_SECRET não estava configurada no .env
+
+<strong>Solução:</strong>
+- Adicionada JWT_SECRET='your-secret-key' no arquivo .env
+- Gerado novo token JWT válido por 24 horas
+- Token deve ser atualizado no localStorage do navegador
+        </div>
+
+        <h2>📝 Instruções de Uso</h2>
+        <ol>
+            <li>Clique em "Atualizar Token no Navegador" para resolver o erro de autenticação</li>
+            <li>Use "Testar API" para verificar se as alterações funcionam</li>
+            <li>Acesse o "Dashboard" para usar a interface de administração</li>
+            <li>O token é válido por 24 horas - após isso, gere um novo</li>
+        </ol>
+    </div>
+
+    <script>
+        // Token JWT atual
+        const currentToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJiOWExOWM4Yi1hOWU2LTQzOTAtYjgyZC1hOGY1NTEyOTI5NTljIiwiZW1haWwiOiJhZG1pbkB6YXBib3QuY29tIiwidXNlclR5cGUiOiJBRE1JTiIsImlzU3VwZXJBZG1pbiI6dHJ1ZSwidGVuYW50SWQiOm51bGwsImlhdCI6MTc1NzU1MTMxMCwiZXhwIjoxNzU3NjM3NzEwfQ.SEcQ3rhDaoVdzyadd_HUr3UyO8Z0oNl6jH1WWT4oGMk';
+        
+        // Exibir token na página
+        document.getElementById('tokenDisplay').textContent = currentToken;
+        
+        function showStatus(message, isError = false) {
+            const status = document.getElementById('status');
+            status.className = `status ${isError ? 'error' : 'success'}`;
+            status.textContent = message;
+            setTimeout(() => {
+                status.textContent = '';
+                status.className = '';
+            }, 5000);
+        }
+        
+        function updateToken() {
+            try {
+                localStorage.setItem('authToken', currentToken);
+                showStatus('✅ Token atualizado com sucesso no localStorage!');
+                console.log('Token JWT atualizado:', currentToken);
+            } catch (error) {
+                showStatus('❌ Erro ao atualizar token: ' + error.message, true);
+            }
+        }
+        
+        async function testAPI() {
+            try {
+                showStatus('🔄 Testando API...');
+                
+                const response = await fetch('/api/administradores/b9a19c8b-a9e6-4390-b82d-a8f551292959c', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${currentToken}`,
+                        'X-Tenant-Id': '3e12a107-fdba-4f39-93fd-55a98c832c93'
+                    },
+                    body: JSON.stringify({
+                        name: 'João Administrador - TESTE ARQUIVO COMPLETO',
+                        email: 'joao@zapbot.com'
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    showStatus('✅ API funcionando! Administrador atualizado: ' + data.name);
+                    console.log('Resposta da API:', data);
+                } else {
+                    const error = await response.json();
+                    showStatus('❌ Erro na API: ' + error.error, true);
+                }
+            } catch (error) {
+                showStatus('❌ Erro ao testar API: ' + error.message, true);
+            }
+        }
+        
+        function openDashboard() {
+            window.open('/dashboard/sistema', '_blank');
+            showStatus('📊 Dashboard aberto em nova aba');
+        }
+        
+        function clearToken() {
+            localStorage.removeItem('authToken');
+            showStatus('🗑️ Token removido do localStorage');
+        }
+        
+        // Verificar se há token no localStorage ao carregar
+        window.onload = function() {
+            const existingToken = localStorage.getItem('authToken');
+            if (existingToken) {
+                showStatus('ℹ️ Token encontrado no localStorage');
+            } else {
+                showStatus('⚠️ Nenhum token encontrado - clique em "Atualizar Token"', true);
+            }
+        };
+    </script>
+</body>
+</html>

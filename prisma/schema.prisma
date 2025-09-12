@@ -15,7 +15,6 @@ model User {
   userType    UserType     @default(MANAGER)
   isSuperAdmin Boolean     @default(false)
   accountId   String?      // ID da conta/empresa do usuário
-  tenantId    String?      // ID do tenant (organização)
   adminId     String?      // ID do administrador (para gerentes)
   isActive    Boolean      @default(true)
   createdAt   DateTime     @default(now())
@@ -26,15 +25,25 @@ model User {
   adminAttendants Attendant[] @relation("AdminAttendants")
   managedManagers User[]     @relation("AdminManagers")
   admin       User?        @relation("AdminManagers", fields: [adminId], references: [id])
-  tenant      Tenant?      @relation(fields: [tenantId], references: [id])
 
-  @@index([tenantId])
   @@index([adminId])
 }
 
 enum UserType {
   ADMIN
   MANAGER
+}
+
+model SystemSettings {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  type        String   @default("string")
+  category    String   @default("general")
+  description String?
+  isPublic    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 
@@ -196,40 +205,4 @@ model Rating {
   @@index([attendantId])
   @@index([leadId])
   @@index([type])
-}
-
-model Tenant {
-  id          String   @id @default(uuid())
-  name        String   // Nome da organização (ex: "ADLUX", "LAU")
-  slug        String   @unique // Slug para URL (ex: "crmadlux", "crmlau")
-  domain      String?  @unique // Domínio personalizado (ex: "crm.adlux.com.br")
-  email       String?  // Email do administrador do tenant
-  password    String?  // Senha do administrador do tenant
-  logo        String?  // URL/caminho da logo do tenant
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  users       User[]
-  settings    SystemSettings[]
-
-  @@index([slug])
-  @@index([domain])
-}
-
-model SystemSettings {
-  id          String   @id @default(uuid())
-  tenantId    String   // Cada tenant tem suas próprias configurações
-  key         String   // Chave da configuração (ex: "system_name", "smtp_host")
-  value       String   @db.Text // Valor da configuração
-  type        String   @default("string") // Tipo: string, number, boolean, json
-  category    String   @default("general") // Categoria: general, smtp, appearance
-  description String?  // Descrição da configuração
-  isPublic    Boolean  @default(false) // Se pode ser acessada publicamente
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@unique([tenantId, key])
-  @@index([tenantId])
-  @@index([category])
 }

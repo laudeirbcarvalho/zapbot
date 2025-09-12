@@ -5,12 +5,18 @@ import { withAuth } from '@/app/lib/auth-middleware';
 const prisma = new PrismaClient();
 
 // GET - Listar todos os departamentos
-export const GET = withAuth(async () => {
+export const GET = withAuth(async (request: Request) => {
   try {
+    const user = (request as any).user;
+    
+    const whereClause: any = {
+      isActive: true
+    };
+    
+    // Removido filtro por tenantId - sistema single-tenant
+    
     const departments = await prisma.department.findMany({
-      where: {
-        isActive: true
-      },
+      where: whereClause,
       orderBy: {
         name: 'asc'
       }

@@ -11,10 +11,12 @@ export const GET = withAuth(async (request: NextRequest) => {
 
     console.log('🔍 [API] Buscando leads no banco de dados...');
     
-    // Construir filtros baseados no tipo de usuário
-    let whereClause: any = {
-      deletedAt: null, // Apenas leads não deletados
+    // Filtro base
+    const whereClause: any = {
+      deletedAt: null,
     };
+
+    // Removido filtro por tenantId - sistema single-tenant
     
     // Filtrar baseado no tipo de usuário
     if (user.isSuperAdmin) {
@@ -55,17 +57,26 @@ export const GET = withAuth(async (request: NextRequest) => {
       
       const teamAttendantIds = teamAttendants.map(att => att.id);
       
-      // Filtrar leads: da hierarquia do admin OU não atribuídos
-      whereClause.OR = [
-        {
-          attendantId: {
-            in: teamAttendantIds
+      // Filtrar leads: da hierarquia do admin OU não atribuídos (mas do mesmo tenant)
+      if (teamAttendantIds.length > 0) {
+        whereClause.AND = [
+          {
+            OR: [
+              {
+                attendantId: {
+                  in: teamAttendantIds
+                }
+              },
+              {
+                attendantId: null // Leads não atribuídos do mesmo tenant
+              }
+            ]
           }
-        },
-        {
-          attendantId: null // Leads não atribuídos
-        }
-      ];
+        ];
+      } else {
+        // Se não tem atendentes, mostrar apenas leads não atribuídos do mesmo tenant
+        whereClause.attendantId = null;
+      }
       
       console.log(`🔍 [API] Admin ${user.name} - Filtrando leads da hierarquia (${managerIds.length} gerentes, ${teamAttendantIds.length} atendentes)`);
     } else if (user.userType === 'MANAGER') {

@@ -35,24 +35,9 @@ export default function ConfiguracoesPage() {
     }
   }, [router]);
 
-  // Carregar configurações do servidor
+  // Configurações removidas - funcionalidade não disponível
   useEffect(() => {
-    async function fetchSettings() {
-      try {
-        setDataLoading(true);
-        const { authenticatedFetch } = await import('@/app/lib/api-client');
-        const data = await authenticatedFetch('/api/settings');
-        setFormData(data);
-        setError(null);
-      } catch (err) {
-        console.error('Erro ao carregar configurações:', err);
-        setError('Falha ao carregar configurações. Por favor, tente novamente.');
-      } finally {
-        setDataLoading(false);
-      }
-    }
-    
-    fetchSettings();
+    setDataLoading(false);
   }, []);
 
   // Verificar autenticação e permissão de admin
@@ -87,24 +72,7 @@ export default function ConfiguracoesPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    try {
-      setSaving(true);
-      const { authenticatedFetch } = await import('@/app/lib/api-client');
-      const data = await authenticatedFetch('/api/settings', {
-        method: 'PUT',
-        body: formData,
-      });
-      
-      setFormData(data);
-      setError(null);
-      alert("Configurações salvas com sucesso!");
-    } catch (err) {
-      console.error('Erro ao salvar configurações:', err);
-      setError('Falha ao salvar configurações. Por favor, tente novamente.');
-    } finally {
-      setSaving(false);
-    }
+    alert("Funcionalidade de configurações não disponível.");
   };
 
   return (

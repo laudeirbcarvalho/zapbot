@@ -8,7 +8,6 @@ const prisma = new PrismaClient();
 export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json();
-    const tenantSlug = request.headers.get('X-Tenant-Slug');
 
     if (!email || !password) {
       return NextResponse.json(
@@ -17,43 +16,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let tenantId = null;
-
-    // Se um slug de tenant foi fornecido, validar e obter o tenant
-    if (tenantSlug) {
-      const tenant = await prisma.tenant.findFirst({
-        where: {
-          slug: tenantSlug.toLowerCase(),
-          isActive: true
-        }
-      });
-
-      if (!tenant) {
-        return NextResponse.json(
-          { error: 'Tenant não encontrado ou inativo' },
-          { status: 404 }
-        );
-      }
-
-      tenantId = tenant.id;
-    }
-
     // Buscar usuário no banco
-    const whereClause: any = {
-      email: email.toLowerCase(),
-      isActive: true
-    };
-
-    // Se um tenant foi especificado, filtrar por ele (exceto para Super Admins)
-    if (tenantId) {
-      whereClause.OR = [
-        { tenantId: tenantId }, // Usuário pertence ao tenant
-        { isSuperAdmin: true }   // Ou é Super Admin (pode acessar qualquer tenant)
-      ];
-    }
-
     const user = await prisma.user.findFirst({
-      where: whereClause,
+      where: {
+        email: email.toLowerCase(),
+        isActive: true
+      },
       select: {
         id: true,
         name: true,
@@ -62,15 +30,7 @@ export async function POST(request: NextRequest) {
         userType: true,
         isSuperAdmin: true,
         accountId: true,
-        isActive: true,
-        tenantId: true,
-        tenant: {
-          select: {
-            id: true,
-            name: true,
-            slug: true
-          }
-        }
+        isActive: true
       }
     });
 
@@ -90,22 +50,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verificar se o usuário tem acesso ao tenant (se especificado)
-    if (tenantId && !user.isSuperAdmin && user.tenantId !== tenantId) {
-      return NextResponse.json(
-        { error: 'Usuário não tem acesso a este tenant' },
-        { status: 403 }
-      );
-    }
-
     // Gerar JWT token
     const token = jwt.sign(
       { 
         userId: user.id,
         email: user.email,
         userType: user.userType,
-        isSuperAdmin: user.isSuperAdmin,
-        tenantId: tenantId || user.tenantId
+        isSuperAdmin: user.isSuperAdmin
       },
       process.env.JWT_SECRET || 'fallback-secret',
       { expiresIn: '24h' }

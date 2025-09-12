@@ -13,19 +13,18 @@ export interface SystemSetting {
 }
 
 export class SettingsManager {
-  private tenantId: string;
-  private cache: Map<string, SystemSetting> = new Map();
+  private cache: Map<string, any> = new Map();
   private cacheExpiry: number = 0;
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
 
-  constructor(tenantId: string) {
-    this.tenantId = tenantId;
+  constructor() {
+    // Inicialização sem tenantId
   }
 
   /**
-   * Busca uma configuração específica
+   * Obtém uma configuração específica
    */
-  async getSetting(key: string): Promise<SystemSetting | null> {
+  async getSetting(key: string): Promise<any> {
     await this.loadCache();
     return this.cache.get(key) || null;
   }
@@ -39,49 +38,49 @@ export class SettingsManager {
   }
 
   /**
-   * Busca configurações por categoria
+   * Obtém configurações por categoria
    */
-  async getSettingsByCategory(category: string): Promise<SystemSetting[]> {
-    await this.loadCache();
-    return Array.from(this.cache.values()).filter(s => s.category === category);
+  async getSettingsByCategory(category: string): Promise<any[]> {
+    const settings = await prisma.systemSettings.findMany({
+      where: { category },
+      orderBy: { key: 'asc' }
+    });
+    return settings.map(s => ({ ...s, value: JSON.parse(s.value) }));
   }
 
   /**
-   * Busca todas as configurações públicas
+   * Obtém configurações públicas
    */
-  async getPublicSettings(): Promise<SystemSetting[]> {
-    await this.loadCache();
-    return Array.from(this.cache.values()).filter(s => s.isPublic);
+  async getPublicSettings(): Promise<any[]> {
+    const settings = await prisma.systemSettings.findMany({
+      where: { isPublic: true },
+      orderBy: { key: 'asc' }
+    });
+    return settings.map(s => ({ ...s, value: JSON.parse(s.value) }));
   }
 
   /**
    * Atualiza uma configuração
    */
-  async updateSetting(key: string, value: string): Promise<SystemSetting> {
-    const setting = await prisma.systemSettings.upsert({
+  async updateSetting(key: string, value: any): Promise<void> {
+    await prisma.systemSettings.upsert({
       where: {
-        tenantId_key: {
-          tenantId: this.tenantId,
-          key: key
-        }
+        key,
       },
       update: {
-        value: value,
-        updatedAt: new Date()
+        value: JSON.stringify(value),
+        updatedAt: new Date(),
       },
       create: {
-        tenantId: this.tenantId,
-        key: key,
-        value: value,
-        type: 'string',
-        category: 'general'
-      }
+         key,
+         value: JSON.stringify(value),
+         type: 'string',
+         category: 'general'
+       },
     });
 
-    // Limpar cache para forçar reload
-    this.clearCache();
-    
-    return setting;
+    // Update cache
+    this.cache.set(key, value);
   }
 
   /**
@@ -103,13 +102,16 @@ export class SettingsManager {
     }
 
     const settings = await prisma.systemSettings.findMany({
-      where: { tenantId: this.tenantId },
       orderBy: { key: 'asc' }
     });
 
     this.cache.clear();
     settings.forEach(setting => {
-      this.cache.set(setting.key, setting);
+      try {
+        this.cache.set(setting.key, JSON.parse(setting.value));
+      } catch {
+        this.cache.set(setting.key, setting.value);
+      }
     });
 
     this.cacheExpiry = now + this.CACHE_DURATION;
@@ -125,39 +127,8 @@ export class SettingsManager {
 }
 
 /**
- * Função utilitária para buscar configurações de um tenant
+ * Função utilitária para buscar configurações do sistema
  */
-export async function getTenantSettings(tenantId: string): Promise<SettingsManager> {
-  return new SettingsManager(tenantId);
-}
-
-/**
- * Função para buscar tenant por slug ou domínio
- */
-export async function getTenantByIdentifier(identifier: string): Promise<any> {
-  // Primeiro tenta por slug
-  let tenant = await prisma.tenant.findUnique({
-    where: { slug: identifier },
-    include: { settings: true }
-  });
-
-  // Se não encontrar, tenta por domínio
-  if (!tenant) {
-    tenant = await prisma.tenant.findUnique({
-      where: { domain: identifier },
-      include: { settings: true }
-    });
-  }
-
-  return tenant;
-}
-
-/**
- * Função para buscar tenant padrão
- */
-export async function getDefaultTenant(): Promise<any> {
-  return await prisma.tenant.findUnique({
-    where: { slug: 'default' },
-    include: { settings: true }
-  });
+export async function getSystemSettings(): Promise<SettingsManager> {
+  return new SettingsManager();
 }

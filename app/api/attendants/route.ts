@@ -18,6 +18,8 @@ export const GET = withAuth(async (request: Request) => {
       isActive: true
     };
     
+    // Removido filtro por tenantId - sistema single-tenant
+    
     // Filtrar baseado no tipo de usuário
     if (user.isSuperAdmin) {
       // Super Admin vê todos os atendentes

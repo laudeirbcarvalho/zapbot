@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useTenant } from "../hooks/useTenant";
 
 interface User {
   id: string;
@@ -14,19 +13,49 @@ interface User {
 
 export default function Header({ title }: { title: string }) {
   const [user, setUser] = useState<User | null>(null);
-  const { tenant, settings } = useTenant();
 
   useEffect(() => {
-    // Obter dados do usuário do localStorage
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      try {
-        const parsedUser = JSON.parse(userData);
-        setUser(parsedUser);
-      } catch (error) {
-        console.error('Erro ao parsear dados do usuário:', error);
+    // Função para carregar dados do usuário
+    const loadUserData = () => {
+      // Priorizar sessionStorage para sessões independentes por aba
+      const userData = sessionStorage.getItem('user') || localStorage.getItem('user');
+      if (userData) {
+        try {
+          const parsedUser = JSON.parse(userData);
+          setUser(parsedUser);
+          console.log('👤 Header: Dados do usuário carregados:', parsedUser);
+        } catch (error) {
+          console.error('Erro ao parsear dados do usuário:', error);
+        }
+      } else {
+        setUser(null);
       }
-    }
+    };
+
+    // Carregar dados iniciais
+    loadUserData();
+
+    // Escutar mudanças no localStorage
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'user') {
+        console.log('🔄 Header: Detectada mudança nos dados do usuário');
+        loadUserData();
+      }
+    };
+
+    // Escutar eventos customizados para mudanças no localStorage
+    const handleUserUpdate = () => {
+      console.log('🔄 Header: Evento de atualização do usuário detectado');
+      loadUserData();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('userUpdated', handleUserUpdate);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('userUpdated', handleUserUpdate);
+    };
   }, []);
 
   const getUserTypeLabel = (userType: string, isSuperAdmin: boolean = false) => {
@@ -39,8 +68,8 @@ export default function Header({ title }: { title: string }) {
     return userType === 'ADMIN' ? 'bg-purple-500' : 'bg-blue-500';
   };
 
-  const systemName = settings?.system_name || tenant?.name || 'CRM';
-  const logoUrl = settings?.system_logo_url;
+  const systemName = 'ZapBot CRM';
+  const logoUrl = null; // Logo será configurado via sistema de configurações
 
   return (
     <header className="bg-gray-800 p-4 flex justify-between items-center">

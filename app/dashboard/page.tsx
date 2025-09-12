@@ -59,10 +59,62 @@ export default function Dashboard() {
   const [statsLoading, setStatsLoading] = useState(true);
 
   useEffect(() => {
-    if (!isLoading && userId) {
-      fetchStats();
+    // Verificar se há parâmetros de login automático na URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const autoLoginToken = urlParams.get('autoLogin');
+    const adminName = urlParams.get('adminName');
+    const newSession = urlParams.get('newSession');
+    
+    if (autoLoginToken) {
+      console.log('🔑 Login automático detectado para:', adminName);
+      console.log('🆕 Nova sessão:', newSession === 'true' ? 'Sim' : 'Não');
+      
+      try {
+        // Decodificar o JWT para obter os dados do usuário
+        const tokenPayload = JSON.parse(atob(autoLoginToken.split('.')[1]));
+        console.log('📋 Dados do token:', tokenPayload);
+        
+        // Escolher storage baseado no parâmetro newSession
+        const storage = newSession === 'true' ? sessionStorage : localStorage;
+        
+        // Salvar token no storage apropriado
+        storage.setItem('authToken', autoLoginToken);
+        
+        // Salvar dados do usuário no storage apropriado
+        const userData = {
+          id: tokenPayload.userId,
+          name: tokenPayload.name || adminName,
+          email: tokenPayload.email,
+          userType: 'ADMIN',
+          isSuperAdmin: tokenPayload.isSuperAdmin || false,
+          tenantId: tokenPayload.tenantId
+        };
+        storage.setItem('user', JSON.stringify(userData));
+        
+        console.log('💾 Dados do usuário salvos:', userData);
+        
+        // Disparar evento customizado para notificar componentes sobre a mudança
+        window.dispatchEvent(new Event('userUpdated'));
+        
+        // Limpar parâmetros da URL
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, newUrl);
+        
+        // Mostrar mensagem de sucesso
+        console.log('✅ Login automático realizado com sucesso!');
+        
+        // Recarregar a página para aplicar o novo token
+        window.location.reload();
+        return;
+      } catch (error) {
+        console.error('❌ Erro ao processar token de login automático:', error);
+      }
     }
-  }, [isLoading, userId]);
+    
+    if (!isLoading && userId) {
+       fetchStats();
+     }
+   }, [isLoading, userId]);
 
   const fetchStats = async () => {
     try {

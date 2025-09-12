@@ -22,7 +22,8 @@ export function useAuth(): AuthState {
   useEffect(() => {
     const checkAuth = () => {
       try {
-        const userData = localStorage.getItem('user');
+        // Priorizar sessionStorage para suportar múltiplas sessões
+        const userData = sessionStorage.getItem('user') || localStorage.getItem('user');
         if (userData) {
           const user = JSON.parse(userData);
           setAuthState({
@@ -55,13 +56,22 @@ export function useAuth(): AuthState {
 
     checkAuth();
 
-    // Escutar mudanças no localStorage
+    // Escutar mudanças no localStorage e sessionStorage
     const handleStorageChange = () => {
       checkAuth();
     };
 
+    // O evento 'storage' só funciona para localStorage entre abas
+    // Para sessionStorage, precisamos verificar periodicamente ou usar outros métodos
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    
+    // Verificar mudanças periodicamente para sessionStorage
+    const interval = setInterval(checkAuth, 1000);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
   }, []);
 
   return authState;
