@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react';
 import AddAttendantModal from '../../components/AddAttendantModal';
 import EditAttendantModal from '../../components/EditAttendantModal';
+import HelpModal from '../../components/HelpModal';
 import { useAuth } from '../../hooks/useAuth';
 import Header from '../../components/Header';
+import { getHelpData } from '../../data/helpData';
 // Removidas importações de componentes UI não existentes
 
 interface Attendant {
@@ -58,8 +60,11 @@ export default function AttendantsPage() {
   const [selectedAttendant, setSelectedAttendant] = useState<Attendant | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [attendantToDelete, setAttendantToDelete] = useState<{id: string, name: string} | null>(null);
+  const [showHelpModal, setShowHelpModal] = useState(false);
   
   const { isAdmin, userId, isLoading, userType } = useAuth();
+  
+  const helpData = getHelpData('attendants');
 
   const fetchAttendants = async () => {
     try {
@@ -228,14 +233,24 @@ export default function AttendantsPage() {
             Gerencie sua equipe de atendimento e acompanhe o desempenho
           </p>
         </div>
-        {(isAdmin || userType === 'MANAGER') && (
+        <div className="flex gap-3">
           <button 
-            onClick={handleAddAttendant}
-            className="px-4 py-2 rounded-md transition-colors bg-blue-600 text-white hover:bg-blue-700"
+            onClick={() => setShowHelpModal(true)}
+            className="px-4 py-2 rounded-md transition-colors bg-purple-600 text-white hover:bg-purple-700 flex items-center gap-2"
+            title="Como usar este módulo"
           >
-            Adicionar Atendente
+            <span>❓</span>
+            Ajuda
           </button>
-        )}
+          {(isAdmin || userType === 'MANAGER') && (
+            <button 
+              onClick={handleAddAttendant}
+              className="px-4 py-2 rounded-md transition-colors bg-blue-600 text-white hover:bg-blue-700"
+            >
+              Adicionar Atendente
+            </button>
+          )}
+        </div>
       </div>
 
       {attendants.length === 0 ? (
@@ -466,6 +481,16 @@ export default function AttendantsPage() {
             </div>
           </div>
         </div>
+      )}
+      
+      {/* Modal de Ajuda */}
+      {showHelpModal && helpData && (
+        <HelpModal
+          isOpen={showHelpModal}
+          onClose={() => setShowHelpModal(false)}
+          moduleName={helpData.moduleName}
+          steps={helpData.steps}
+        />
       )}
     </div>
   );

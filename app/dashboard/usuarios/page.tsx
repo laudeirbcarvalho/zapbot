@@ -4,10 +4,12 @@ import { useState, useEffect } from 'react';
 import { useRouter } from "next/navigation";
 import { PlusIcon, PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline';
 import Header from "@/app/components/Header";
+import HelpModal from "@/app/components/HelpModal";
 import AddUserModal from '../../components/AddUserModal';
 import EditUserModal from '../../components/EditUserModal';
 import ViewUserModal from '../../components/ViewUserModal';
 import { useAuth } from '../../hooks/useAuth';
+import { getHelpData } from '../../data/helpData';
 
 interface User {
   id: string;
@@ -54,7 +56,9 @@ export default function UsersPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [showHelpModal, setShowHelpModal] = useState(false);
   
+  const helpData = getHelpData('usuarios');
   const { isAdmin, isSuperAdmin, userId, isLoading } = useAuth();
 
   const fetchUsers = async () => {
@@ -247,15 +251,25 @@ export default function UsersPage() {
       <div className="space-y-6 mt-6">
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-semibold text-white">Lista de Usuários</h2>
-          {isAdmin && (
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="px-4 py-2 rounded-md flex items-center gap-2 transition-colors bg-blue-600 hover:bg-blue-700 text-white"
+          <div className="flex gap-3">
+            <button 
+              onClick={() => setShowHelpModal(true)}
+              className="px-4 py-2 rounded-md transition-colors bg-purple-600 text-white hover:bg-purple-700 flex items-center gap-2"
+              title="Como usar este módulo"
             >
-              <PlusIcon className="h-5 w-5" />
-              Novo Usuário
+              <span>❓</span>
+              Ajuda
             </button>
-          )}
+            {isAdmin && (
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="px-4 py-2 rounded-md flex items-center gap-2 transition-colors bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <PlusIcon className="h-5 w-5" />
+                Novo Usuário
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="bg-gray-800 p-4 rounded-lg shadow space-y-4">
@@ -448,6 +462,16 @@ export default function UsersPage() {
               setShowViewModal(false);
               setSelectedUser(null);
             }}
+          />
+        )}
+        
+        {/* Modal de Ajuda */}
+        {showHelpModal && helpData && (
+          <HelpModal
+            isOpen={showHelpModal}
+            onClose={() => setShowHelpModal(false)}
+            moduleName={helpData.moduleName}
+            steps={helpData.steps}
           />
         )}
       </div>

@@ -2,9 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import Header from "@/app/components/Header";
+import HelpModal from "@/app/components/HelpModal";
 import { useState, useEffect } from "react";
 import { useColumnSync } from "@/app/hooks/useColumnSync";
 import { useAuth } from "@/app/hooks/useAuth";
+import { getHelpData } from "@/app/data/helpData";
 
 interface Lead {
   id: string;
@@ -64,6 +66,9 @@ export default function LeadsPage() {
   const [importLoading, setImportLoading] = useState(false);
   const [showDuplicatesModal, setShowDuplicatesModal] = useState(false);
   const [duplicatesData, setDuplicatesData] = useState<any>(null);
+  const [showHelpModal, setShowHelpModal] = useState(false);
+  
+  const helpData = getHelpData('leads');
   
   // Form states
   const [formData, setFormData] = useState({
@@ -496,6 +501,14 @@ export default function LeadsPage() {
           <h2 className="text-xl font-semibold">Lista de Leads</h2>
           <div className="flex gap-2 items-center">
              <button 
+               onClick={() => setShowHelpModal(true)}
+               className="px-4 py-2 rounded-md transition-colors bg-purple-600 text-white hover:bg-purple-700 flex items-center gap-2"
+               title="Como usar este módulo"
+             >
+               <span>❓</span>
+               Ajuda
+             </button>
+             <button 
                onClick={() => setShowImportModal(true)}
                className="px-4 py-2 rounded-md text-white bg-green-600 hover:bg-green-700"
              >
@@ -877,6 +890,16 @@ export default function LeadsPage() {
             </div>
           </div>
         </div>
+      )}
+      
+      {/* Modal de Ajuda */}
+      {showHelpModal && helpData && (
+        <HelpModal
+          isOpen={showHelpModal}
+          onClose={() => setShowHelpModal(false)}
+          moduleName={helpData.moduleName}
+          steps={helpData.steps}
+        />
       )}
     </div>
   );

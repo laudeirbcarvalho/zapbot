@@ -3,6 +3,8 @@
 import { redirect } from "next/navigation";
 import { useRouter } from "next/navigation";
 import Header from "@/app/components/Header";
+import HelpModal from "@/app/components/HelpModal";
+import { getHelpData } from '@/app/data/helpData';
 import { useState, useEffect } from "react";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -23,6 +25,8 @@ export default function ConfiguracoesPage() {
   const [dataLoading, setDataLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showHelpModal, setShowHelpModal] = useState(false);
+  const helpData = getHelpData('configuracoes');
 
 
 
@@ -78,6 +82,22 @@ export default function ConfiguracoesPage() {
   return (
     <div className="p-6">
       <Header title="Configurações" />
+      
+      {/* Seção de título com botão de ajuda */}
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Configurações do Sistema</h1>
+          <p className="text-gray-400 mt-1">Gerencie as configurações gerais da empresa e integrações</p>
+        </div>
+        <button
+          onClick={() => setShowHelpModal(true)}
+          className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+          title="Ajuda sobre Configurações"
+        >
+          <span className="text-lg">❓</span>
+          Ajuda
+        </button>
+      </div>
       
       <div className="mt-6 max-w-4xl mx-auto">
         {dataLoading ? (
@@ -225,6 +245,14 @@ export default function ConfiguracoesPage() {
         </form>
       )}
       </div>
+      
+      {/* Modal de Ajuda */}
+      <HelpModal
+        isOpen={showHelpModal}
+        onClose={() => setShowHelpModal(false)}
+        moduleName={helpData.moduleName}
+        steps={helpData.steps}
+      />
     </div>
   );
 }

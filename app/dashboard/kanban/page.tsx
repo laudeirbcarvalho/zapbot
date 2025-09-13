@@ -10,6 +10,8 @@ import { AttendanceModal } from '../../components/AttendanceModal';
 import AddColumnButton from '../../components/AddColumnButton';
 import { useAuth } from '../../hooks/useAuth';
 import Header from '../../components/Header';
+import HelpModal from '@/app/components/HelpModal';
+import { getHelpData } from '@/app/data/helpData';
 
 interface Lead {
   id: string;
@@ -51,6 +53,8 @@ export default function KanbanPage() {
   const [newLeadColumnId, setNewLeadColumnId] = useState<string | null>(null);
   const [attendanceModalOpen, setAttendanceModalOpen] = useState(false);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [showHelpModal, setShowHelpModal] = useState(false);
+  const helpData = getHelpData('kanban');
   
   const { isAdmin, userId, isLoading } = useAuth();
 
@@ -465,6 +469,22 @@ export default function KanbanPage() {
     <div className="p-6 bg-gray-900 min-h-screen">
       <Header title="Kanban" />
       
+      {/* Seção de título com botão de ajuda */}
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Kanban - Funil de Vendas</h1>
+          <p className="text-gray-400 mt-1">Gerencie visualmente o progresso dos seus leads através do processo de vendas</p>
+        </div>
+        <button
+          onClick={() => setShowHelpModal(true)}
+          className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+          title="Ajuda sobre Kanban"
+        >
+          <span className="text-lg">❓</span>
+          Ajuda
+        </button>
+      </div>
+      
       <div className="mt-6">
         <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
           <div className="flex gap-6 overflow-x-auto pb-6">
@@ -521,6 +541,14 @@ export default function KanbanPage() {
           setSelectedLeadId(null);
         }}
         leadId={selectedLeadId}
+      />
+      
+      {/* Modal de Ajuda */}
+      <HelpModal
+        isOpen={showHelpModal}
+        onClose={() => setShowHelpModal(false)}
+        moduleName={helpData.moduleName}
+        steps={helpData.steps}
       />
     </div>
   );

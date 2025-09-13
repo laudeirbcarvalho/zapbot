@@ -5,6 +5,8 @@ import { useAuth } from '@/app/hooks/useAuth';
 import { Trash2, RotateCcw, X, AlertTriangle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Header from '@/app/components/Header';
+import HelpModal from '@/app/components/HelpModal';
+import { getHelpData } from '@/app/data/helpData';
 
 interface Lead {
   id: string;
@@ -56,6 +58,9 @@ export default function LixeiraPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [dataLoading, setDataLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showHelpModal, setShowHelpModal] = useState(false);
+  
+  const helpData = getHelpData('lixeira');
 
   const fetchTrashLeads = async () => {
     try {
@@ -252,6 +257,21 @@ export default function LixeiraPage() {
       <Header title="Lixeira" />
       
       <div className="mt-6">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h2 className="text-xl font-semibold text-white">Leads Excluídos</h2>
+            <p className="text-gray-300 mt-1">Gerencie leads na lixeira - restaure ou exclua permanentemente</p>
+          </div>
+          <button 
+            onClick={() => setShowHelpModal(true)}
+            className="px-4 py-2 rounded-md transition-colors bg-purple-600 text-white hover:bg-purple-700 flex items-center gap-2"
+            title="Como usar este módulo"
+          >
+            <span>❓</span>
+            Ajuda
+          </button>
+        </div>
+        
         {/* Barra de pesquisa */}
         <form onSubmit={handleSearch} className="mb-6">
           <div className="flex gap-4">
@@ -387,6 +407,16 @@ export default function LixeiraPage() {
               </div>
             )}
           </div>
+        )}
+        
+        {/* Modal de Ajuda */}
+        {showHelpModal && helpData && (
+          <HelpModal
+            isOpen={showHelpModal}
+            onClose={() => setShowHelpModal(false)}
+            moduleName={helpData.moduleName}
+            steps={helpData.steps}
+          />
         )}
 
       </div>
