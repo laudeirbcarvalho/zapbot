@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Frontend - WhatsApp Instances</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .result { background: #f5f5f5; padding: 10px; margin: 10px 0; }
+        button { padding: 10px 15px; margin: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Debug Frontend - WhatsApp Instances</h1>
+    
+    <div class="section">
+        <h3>1. Verificar Token</h3>
+        <button onclick="checkToken()">Verificar Token</button>
+        <button onclick="setValidToken()">Definir Token Válido</button>
+        <div id="tokenResult" class="result"></div>
+    </div>
+    
+    <div class="section">
+        <h3>2. Testar API</h3>
+        <button onclick="testAPI()">Testar GET /api/whatsapp-instances</button>
+        <div id="apiResult" class="result"></div>
+    </div>
+    
+    <div class="section">
+        <h3>3. Simular loadInstances</h3>
+        <button onclick="simulateLoadInstances()">Simular loadInstances()</button>
+        <div id="loadResult" class="result"></div>
+    </div>
+    
+    <script>
+        const validToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIwZmEzZjZmNS1jY2IyLTQ0MjEtYmJlYy0xNzk1MTEwYWQ4NWIiLCJlbWFpbCI6InN1cGVyYWRtaW5Ac2lzdGVtYS5jb20iLCJ1c2VyVHlwZSI6IkFETUlOIiwiaXNTdXBlckFkbWluIjp0cnVlLCJpYXQiOjE3NTc3Njc5MTEsImV4cCI6MTc1Nzg1NDMxMX0.xuZyBK-axeTai6pdZgCcLRIbyoLkgtmjhoYvqZVCR6o';
+        
+        function checkToken() {
+            const token = localStorage.getItem('authToken');
+            const result = document.getElementById('tokenResult');
+            
+            if (token) {
+                result.innerHTML = `<div class="success">✅ Token encontrado: ${token.substring(0, 50)}...</div>`;
+                
+                // Decodificar token para verificar validade
+                try {
+                    const payload = JSON.parse(atob(token.split('.')[1]));
+                    const now = Math.floor(Date.now() / 1000);
+                    const isExpired = payload.exp < now;
+                    
+                    result.innerHTML += `<div>User ID: ${payload.userId}</div>`;
+                    result.innerHTML += `<div>Email: ${payload.email}</div>`;
+                    result.innerHTML += `<div>Expira em: ${new Date(payload.exp * 1000)}</div>`;
+                    result.innerHTML += `<div class="${isExpired ? 'error' : 'success'}">Status: ${isExpired ? 'EXPIRADO' : 'VÁLIDO'}</div>`;
+                } catch (e) {
+                    result.innerHTML += `<div class="error">❌ Erro ao decodificar token: ${e.message}</div>`;
+                }
+            } else {
+                result.innerHTML = '<div class="error">❌ Nenhum token encontrado</div>';
+            }
+        }
+        
+        function setValidToken() {
+            localStorage.setItem('authToken', validToken);
+            document.getElementById('tokenResult').innerHTML = '<div class="success">✅ Token válido definido!</div>';
+        }
+        
+        async function testAPI() {
+            const result = document.getElementById('apiResult');
+            const token = localStorage.getItem('authToken');
+            
+            if (!token) {
+                result.innerHTML = '<div class="error">❌ Token não encontrado. Defina um token primeiro.</div>';
+                return;
+            }
+            
+            try {
+                result.innerHTML = '<div>🔄 Fazendo requisição...</div>';
+                
+                const response = await fetch('/api/whatsapp-instances', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                result.innerHTML += `<div>Status: ${response.status} ${response.statusText}</div>`;
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    result.innerHTML += `<div class="success">✅ Dados recebidos:</div>`;
+                    result.innerHTML += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                } else {
+                    const errorData = await response.text();
+                    result.innerHTML += `<div class="error">❌ Erro: ${errorData}</div>`;
+                }
+            } catch (error) {
+                result.innerHTML += `<div class="error">❌ Erro na requisição: ${error.message}</div>`;
+            }
+        }
+        
+        async function simulateLoadInstances() {
+            const result = document.getElementById('loadResult');
+            const token = localStorage.getItem('authToken');
+            
+            console.log('🔄 Carregando instâncias...');
+            console.log('🔑 Token:', token ? 'Presente' : 'Ausente');
+            
+            try {
+                result.innerHTML = '<div>🔄 Simulando loadInstances...</div>';
+                
+                const response = await fetch('/api/whatsapp-instances', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token && { 'Authorization': `Bearer ${token}` })
+                    }
+                });
+                
+                console.log('📡 Resposta da API:', response.status, response.statusText);
+                result.innerHTML += `<div>Status: ${response.status} ${response.statusText}</div>`;
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('📊 Dados recebidos:', data);
+                    console.log('📈 Total de instâncias:', data.length);
+                    
+                    result.innerHTML += `<div class="success">✅ ${data.length} instâncias encontradas</div>`;
+                    
+                    if (data.length > 0) {
+                        result.innerHTML += '<div><strong>Instâncias:</strong></div>';
+                        data.forEach((instance, index) => {
+                            result.innerHTML += `<div>${index + 1}. ${instance.instanceName} (${instance.phoneNumber || 'Sem número'})</div>`;
+                        });
+                    } else {
+                        result.innerHTML += '<div class="error">❌ Nenhuma instância encontrada no banco</div>';
+                    }
+                } else {
+                    const errorData = await response.text();
+                    console.error('❌ Erro na API:', errorData);
+                    result.innerHTML += `<div class="error">❌ Erro: ${errorData}</div>`;
+                }
+            } catch (error) {
+                console.error('❌ Erro ao carregar instâncias:', error);
+                result.innerHTML += `<div class="error">❌ Erro: ${error.message}</div>`;
+            }
+        }
+        
+        // Auto-executar verificações ao carregar
+        window.onload = function() {
+            checkToken();
+        };
+    </script>
+</body>
+</html>

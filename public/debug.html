@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug WhatsApp Instances</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #1a1a1a; color: white; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #444; background: #2a2a2a; }
+        .result { background: #333; padding: 10px; margin: 10px 0; border-radius: 4px; }
+        button { padding: 10px 15px; margin: 5px; background: #0066cc; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0052a3; }
+        .success { color: #4ade80; }
+        .error { color: #f87171; }
+        pre { background: #1a1a1a; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Debug WhatsApp Instances</h1>
+    
+    <div class="section">
+        <h3>1. Token Management</h3>
+        <button onclick="setValidToken()">Definir Token Válido</button>
+        <button onclick="checkToken()">Verificar Token</button>
+        <button onclick="clearToken()">Limpar Token</button>
+        <div id="tokenResult" class="result"></div>
+    </div>
+    
+    <div class="section">
+        <h3>2. API Test</h3>
+        <button onclick="testAPI()">Testar API</button>
+        <div id="apiResult" class="result"></div>
+    </div>
+    
+    <div class="section">
+        <h3>3. Console Logs</h3>
+        <button onclick="clearLogs()">Limpar Logs</button>
+        <div id="consoleResult" class="result"></div>
+    </div>
+    
+    <script>
+        const validToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIwZmEzZjZmNS1jY2IyLTQ0MjEtYmJlYy0xNzk1MTEwYWQ4NWIiLCJlbWFpbCI6InN1cGVyYWRtaW5Ac2lzdGVtYS5jb20iLCJ1c2VyVHlwZSI6IkFETUlOIiwiaXNTdXBlckFkbWluIjp0cnVlLCJpYXQiOjE3NTc3Njc5MTEsImV4cCI6MTc1Nzg1NDMxMX0.xuZyBK-axeTai6pdZgCcLRIbyoLkgtmjhoYvqZVCR6o';
+        
+        // Interceptar console.log para mostrar na página
+        const originalLog = console.log;
+        const originalError = console.error;
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addToConsole('LOG', args.join(' '));
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addToConsole('ERROR', args.join(' '));
+        };
+        
+        function addToConsole(type, message) {
+            const result = document.getElementById('consoleResult');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'ERROR' ? 'error' : 'success';
+            result.innerHTML += `<div class="${className}">[${timestamp}] ${type}: ${message}</div>`;
+            result.scrollTop = result.scrollHeight;
+        }
+        
+        function setValidToken() {
+            localStorage.setItem('authToken', validToken);
+            document.getElementById('tokenResult').innerHTML = '<div class="success">✅ Token válido definido!</div>';
+            console.log('Token definido no localStorage');
+        }
+        
+        function checkToken() {
+            const token = localStorage.getItem('authToken');
+            const result = document.getElementById('tokenResult');
+            
+            if (token) {
+                result.innerHTML = `<div class="success">✅ Token encontrado</div>`;
+                
+                try {
+                    const payload = JSON.parse(atob(token.split('.')[1]));
+                    const now = Math.floor(Date.now() / 1000);
+                    const isExpired = payload.exp < now;
+                    
+                    result.innerHTML += `<div>User ID: ${payload.userId}</div>`;
+                    result.innerHTML += `<div>Email: ${payload.email}</div>`;
+                    result.innerHTML += `<div>Expira: ${new Date(payload.exp * 1000).toLocaleString()}</div>`;
+                    result.innerHTML += `<div class="${isExpired ? 'error' : 'success'}">Status: ${isExpired ? 'EXPIRADO' : 'VÁLIDO'}</div>`;
+                    
+                    console.log('Token decodificado:', payload);
+                } catch (e) {
+                    result.innerHTML += `<div class="error">❌ Erro ao decodificar: ${e.message}</div>`;
+                }
+            } else {
+                result.innerHTML = '<div class="error">❌ Token não encontrado</div>';
+                console.log('Token não encontrado no localStorage');
+            }
+        }
+        
+        function clearToken() {
+            localStorage.removeItem('authToken');
+            document.getElementById('tokenResult').innerHTML = '<div class="success">✅ Token removido</div>';
+            console.log('Token removido do localStorage');
+        }
+        
+        async function testAPI() {
+            const result = document.getElementById('apiResult');
+            const token = localStorage.getItem('authToken');
+            
+            console.log('🔄 Iniciando teste da API...');
+            console.log('🔑 Token presente:', token ? 'Sim' : 'Não');
+            
+            if (!token) {
+                result.innerHTML = '<div class="error">❌ Token não encontrado</div>';
+                return;
+            }
+            
+            try {
+                result.innerHTML = '<div>🔄 Fazendo requisição...</div>';
+                
+                const response = await fetch('/api/whatsapp-instances', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                console.log('📡 Status da resposta:', response.status);
+                result.innerHTML += `<div>Status: ${response.status} ${response.statusText}</div>`;
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('📊 Dados recebidos:', data);
+                    console.log('📈 Total de instâncias:', data.length);
+                    
+                    result.innerHTML += `<div class="success">✅ ${data.length} instâncias encontradas</div>`;
+                    result.innerHTML += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                } else {
+                    const errorText = await response.text();
+                    console.error('❌ Erro da API:', errorText);
+                    result.innerHTML += `<div class="error">❌ Erro: ${errorText}</div>`;
+                }
+            } catch (error) {
+                console.error('❌ Erro na requisição:', error);
+                result.innerHTML += `<div class="error">❌ Erro: ${error.message}</div>`;
+            }
+        }
+        
+        function clearLogs() {
+            document.getElementById('consoleResult').innerHTML = '';
+        }
+        
+        // Auto-executar ao carregar
+        window.onload = function() {
+            console.log('Página de debug carregada');
+            checkToken();
+        };
+    </script>
+</body>
+</html>

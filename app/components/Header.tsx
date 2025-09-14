@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSettings } from "../contexts/SettingsContext";
 
 interface User {
   id: string;
@@ -13,6 +14,7 @@ interface User {
 
 export default function Header({ title }: { title: string }) {
   const [user, setUser] = useState<User | null>(null);
+  const { settings } = useSettings();
 
   useEffect(() => {
     // Função para carregar dados do usuário
@@ -68,7 +70,6 @@ export default function Header({ title }: { title: string }) {
     return userType === 'ADMIN' ? 'bg-purple-500' : 'bg-blue-500';
   };
 
-  const systemName = 'ZapBot CRM';
   const logoUrl = null; // Logo será configurado via sistema de configurações
 
   return (
@@ -83,7 +84,7 @@ export default function Header({ title }: { title: string }) {
         )}
         <div>
           <h1 className="text-xl font-semibold text-white">{title}</h1>
-          <div className="text-xs text-gray-400">{systemName}</div>
+          <div className="text-xs text-gray-400">{settings.nomeEmpresa}</div>
         </div>
       </div>
       <div className="flex items-center space-x-3">

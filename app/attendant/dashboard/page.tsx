@@ -11,6 +11,7 @@ interface AttendantData {
   email: string;
   position?: string;
   department?: string;
+  photoUrl?: string;
   type: string;
 }
 
@@ -124,11 +125,26 @@ export default function AttendantDashboard() {
               </h1>
             </div>
             <div className="flex items-center space-x-4">
-              <div className="text-sm text-gray-300">
-                <span className="font-medium">{attendant.name}</span>
-                {attendant.position && (
-                  <span className="ml-2 text-gray-400">({attendant.position})</span>
-                )}
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-700 flex items-center justify-center">
+                  {attendant.photoUrl ? (
+                    <img 
+                      src={attendant.photoUrl} 
+                      alt={attendant.name} 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="text-gray-400 text-lg">
+                      👤
+                    </div>
+                  )}
+                </div>
+                <div className="text-sm text-gray-300">
+                  <span className="font-medium">{attendant.name}</span>
+                  {attendant.position && (
+                    <span className="ml-2 text-gray-400">({attendant.position})</span>
+                  )}
+                </div>
               </div>
               <button
                 onClick={() => router.push('/attendant/profile')}

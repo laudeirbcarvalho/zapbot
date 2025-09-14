@@ -209,47 +209,47 @@ export const helpData: { [key: string]: ModuleHelp } = {
     steps: [
       {
         title: "Visão Geral",
-        description: "Esta página permite configurar as informações gerais da empresa e integrações do sistema.",
+        description: "Esta página permite configurar as informações gerais da empresa e personalizar a aparência do sistema. O nome da empresa configurado aqui aparecerá em todo o sistema.",
         tips: [
           "Configure dados da empresa",
-          "Defina integrações necessárias",
-          "Personalize aparência do sistema"
+          "Personalize aparência do sistema",
+          "Nome da empresa aparece em headers, títulos e emails"
         ]
       },
       {
-        title: "Informações da Empresa",
-        description: "Preencha os dados da sua empresa como nome, email, telefone e endereço. Essas informações são usadas em relatórios e comunicações.",
+        title: "Nome da Empresa/Sistema",
+        description: "O nome configurado aqui será exibido dinamicamente em todo o sistema: headers, títulos, rodapés, emails e qualquer comunicação. Por padrão é 'ZapBot CRM'.",
         tips: [
-          "Mantenha dados sempre atualizados",
-          "Informações aparecem em relatórios",
-          "Email é usado para notificações"
+          "Nome aparece em todo o sistema",
+          "Usado em comunicações e emails",
+          "Pode ser o nome da sua empresa ou sistema personalizado"
         ]
       },
       {
-        title: "Configurações de API",
-        description: "Configure a URL do webhook e a chave da API para integrações externas. Essas configurações são essenciais para o funcionamento de automações.",
+        title: "Informações de Contato",
+        description: "Configure email, telefone e URL/website da empresa. Essas informações são usadas para contato e podem aparecer em relatórios e comunicações.",
         tips: [
-          "URL do webhook deve estar ativa",
-          "Chave da API é sensível - mantenha segura",
-          "Teste integrações após configurar"
+          "Email para comunicações do sistema",
+          "Telefone para contato direto",
+          "URL deve incluir https:// para websites"
         ]
       },
       {
         title: "Tema do Sistema",
-        description: "Escolha entre os temas disponíveis (claro ou escuro) para personalizar a aparência do sistema conforme sua preferência.",
+        description: "Escolha entre tema claro ou escuro. A mudança é aplicada imediatamente em todo o sistema e salva automaticamente para sua preferência.",
         tips: [
-          "Tema escuro reduz cansaço visual",
-          "Tema claro oferece melhor contraste",
-          "Mudança é aplicada imediatamente"
+          "Tema escuro: melhor para ambientes com pouca luz",
+          "Tema claro: melhor contraste e legibilidade",
+          "Mudança é aplicada instantaneamente"
         ]
       },
       {
-        title: "Salvando Alterações",
-        description: "Após fazer as alterações desejadas, clique em 'Salvar Configurações' para aplicar as mudanças ao sistema.",
+        title: "Salvando Configurações",
+        description: "Clique em 'Salvar Configurações' para aplicar todas as alterações. As configurações são salvas localmente e aplicadas imediatamente.",
         tips: [
-          "Sempre salve após fazer alterações",
-          "Configurações são aplicadas imediatamente",
-          "Verifique se todas as informações estão corretas"
+          "Configurações são salvas no navegador",
+          "Mudanças aplicadas imediatamente",
+          "Mensagem de sucesso confirma salvamento"
         ]
       }
     ]

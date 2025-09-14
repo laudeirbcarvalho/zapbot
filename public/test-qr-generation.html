@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Geração de QR Code</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: white;
+        }
+        .container {
+            background-color: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .error {
+            color: #ff6b6b;
+        }
+        .success {
+            color: #51cf66;
+        }
+        .info {
+            color: #74c0fc;
+        }
+        pre {
+            background-color: #1a1a1a;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Teste de Geração de QR Code - WhatsApp Integration</h1>
+    
+    <div class="container">
+        <h2>1. Configurar Token de Autenticação</h2>
+        <button onclick="setAuthToken()">Definir Token no localStorage</button>
+        <button onclick="checkToken()">Verificar Token Atual</button>
+        <div id="tokenStatus"></div>
+    </div>
+
+    <div class="container">
+        <h2>2. Listar Instâncias</h2>
+        <button onclick="listInstances()">Buscar Instâncias</button>
+        <div id="instancesList"></div>
+    </div>
+
+    <div class="container">
+        <h2>3. Testar Geração de QR Code</h2>
+        <button onclick="testQRGeneration()">Gerar QR Code para Primeira Instância</button>
+        <div id="qrResult"></div>
+    </div>
+
+    <script>
+        const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIwZmEzZjZmNS1jY2IyLTQ0MjEtYmJlYy0xNzk1MTEwYWQ4NWIiLCJlbWFpbCI6InN1cGVyYWRtaW5Ac2lzdGVtYS5jb20iLCJ1c2VyVHlwZSI6IkFETUlOIiwiaXNTdXBlckFkbWluIjp0cnVlLCJpYXQiOjE3NTc3Njc5MTEsImV4cCI6MTc1Nzg1NDMxMX0.xuZyBK-axeTai6pdZgCcLRIbyoLkgtmjhoYvqZVCR6o';
+        let instances = [];
+
+        function setAuthToken() {
+            localStorage.setItem('authToken', token);
+            document.getElementById('tokenStatus').innerHTML = '<p class="success">✅ Token configurado no localStorage!</p>';
+        }
+
+        function checkToken() {
+            const storedToken = localStorage.getItem('authToken');
+            const status = document.getElementById('tokenStatus');
+            if (storedToken) {
+                status.innerHTML = `<p class="success">✅ Token encontrado</p><pre>${storedToken.substring(0, 50)}...</pre>`;
+            } else {
+                status.innerHTML = '<p class="error">❌ Nenhum token encontrado no localStorage</p>';
+            }
+        }
+
+        async function listInstances() {
+            const resultDiv = document.getElementById('instancesList');
+            const storedToken = localStorage.getItem('authToken');
+            
+            if (!storedToken) {
+                resultDiv.innerHTML = '<p class="error">❌ Token não encontrado. Configure primeiro.</p>';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/whatsapp-instances', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${storedToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    instances = Array.isArray(data) ? data : [data];
+                    resultDiv.innerHTML = `
+                        <p class="success">✅ ${instances.length} instância(s) encontrada(s):</p>
+                        <pre>${JSON.stringify(instances, null, 2)}</pre>
+                    `;
+                } else {
+                    const errorData = await response.text();
+                    resultDiv.innerHTML = `<p class="error">❌ Erro ${response.status}: ${errorData}</p>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">❌ Erro na requisição: ${error.message}</p>`;
+            }
+        }
+
+        async function testQRGeneration() {
+            const resultDiv = document.getElementById('qrResult');
+            const storedToken = localStorage.getItem('authToken');
+            
+            if (!storedToken) {
+                resultDiv.innerHTML = '<p class="error">❌ Token não encontrado. Configure primeiro.</p>';
+                return;
+            }
+
+            if (instances.length === 0) {
+                resultDiv.innerHTML = '<p class="error">❌ Nenhuma instância encontrada. Liste as instâncias primeiro.</p>';
+                return;
+            }
+
+            const instance = instances[0];
+            const mockQRCode = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+            
+            try {
+                resultDiv.innerHTML = '<p class="info">🔄 Gerando QR Code...</p>';
+                
+                const response = await fetch('/api/whatsapp-instances', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${storedToken}`
+                    },
+                    body: JSON.stringify({
+                        id: instance.id,
+                        instanceId: instance.instanceId,
+                        status: 'qr_code',
+                        qrCode: mockQRCode,
+                        phoneNumber: instance.phoneNumber
+                    })
+                });
+
+                if (response.ok) {
+                    const updatedInstance = await response.json();
+                    resultDiv.innerHTML = `
+                        <p class="success">✅ QR Code gerado com sucesso!</p>
+                        <p><strong>Instância:</strong> ${updatedInstance.instanceName}</p>
+                        <p><strong>Status:</strong> ${updatedInstance.status}</p>
+                        <p><strong>QR Code:</strong> ${updatedInstance.qrCode ? 'Presente' : 'Ausente'}</p>
+                        <pre>${JSON.stringify(updatedInstance, null, 2)}</pre>
+                    `;
+                } else {
+                    const errorData = await response.text();
+                    resultDiv.innerHTML = `<p class="error">❌ Erro ${response.status}: ${errorData}</p>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">❌ Erro na requisição: ${error.message}</p>`;
+            }
+        }
+
+        // Verificar token ao carregar a página
+        window.onload = function() {
+            checkToken();
+        };
+    </script>
+</body>
+</html>

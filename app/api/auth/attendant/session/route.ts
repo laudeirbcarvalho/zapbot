@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
         email: decoded.email,
         position: decoded.position,
         department: decoded.department,
+        photoUrl: decoded.photoUrl,
         type: "attendant",
       },
     });

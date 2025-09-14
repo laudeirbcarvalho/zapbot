@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../hooks/useAuth";
+import { useSettings } from "../contexts/SettingsContext";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: "📊", adminOnly: false, superAdminOnly: false },
@@ -19,6 +20,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { isAdmin, isSuperAdmin } = useAuth();
+  const { settings } = useSettings();
 
   const handleLogout = () => {
     localStorage.removeItem('authToken');
@@ -26,7 +28,6 @@ export default function Sidebar() {
     router.push('/login');
   };
 
-  const systemName = 'ZapBot CRM';
   const logoUrl = null; // Logo será configurado via sistema de configurações
 
   return (
@@ -39,7 +40,7 @@ export default function Sidebar() {
             className="h-10 w-auto mb-2"
           />
         )}
-        <h1 className="text-2xl font-bold text-center">{systemName}</h1>
+        <h1 className="text-2xl font-bold text-center">{settings.nomeEmpresa}</h1>
       </div>
       
       <div className="mt-8 flex-1">

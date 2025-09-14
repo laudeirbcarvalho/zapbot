@@ -1,8 +1,30 @@
 @import "tailwindcss";
 
-:root {
+/* Tema Escuro (padrão) */
+:root,
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  --card-bg: #1f2937;
+  --border-color: #374151;
+  --input-bg: #374151;
+  --input-border: #4b5563;
+  --text-primary: #ffffff;
+  --text-secondary: #d1d5db;
+  --text-muted: #9ca3af;
+}
+
+/* Tema Claro */
+.light {
   --background: #ffffff;
   --foreground: #171717;
+  --card-bg: #f9fafb;
+  --border-color: #e5e7eb;
+  --input-bg: #ffffff;
+  --input-border: #d1d5db;
+  --text-primary: #111827;
+  --text-secondary: #374151;
+  --text-muted: #6b7280;
 }
 
 @theme inline {
@@ -12,15 +34,60 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  min-height: 100vh;
+}
+
+/* Garantir que o tema escuro seja aplicado por padrão */
+html {
+  background: #0a0a0a;
+  color: #ededed;
+}
+
+html.dark {
+  background: #0a0a0a;
+  color: #ededed;
+}
+
+/* Aplicar tema aos elementos principais */
+.light .bg-gray-900 {
+  background-color: #f9fafb !important;
+}
+
+.light .bg-gray-800 {
+  background-color: #ffffff !important;
+  border: 1px solid #e5e7eb;
+}
+
+.light .bg-gray-700 {
+  background-color: #ffffff !important;
+  border-color: #d1d5db !important;
+}
+
+.light .text-white {
+  color: #111827 !important;
+}
+
+.light .text-gray-300 {
+  color: #374151 !important;
+}
+
+.light .text-gray-400 {
+  color: #6b7280 !important;
+}
+
+.light .text-gray-200 {
+  color: #111827 !important;
+}
+
+.light .border-gray-600 {
+  border-color: #d1d5db !important;
+}
+
+.light .border-gray-700 {
+  border-color: #e5e7eb !important;
 }

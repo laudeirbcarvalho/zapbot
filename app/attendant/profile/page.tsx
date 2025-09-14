@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAttendantAuth } from "@/app/lib/attendant-auth-middleware";
-import { Eye, EyeOff, User, Lock, Save, ArrowLeft } from "lucide-react";
+import { Eye, EyeOff, User, Lock, Save, ArrowLeft, Camera } from "lucide-react";
 
 interface AttendantData {
   id: string;
@@ -12,6 +12,8 @@ interface AttendantData {
   position?: string;
   department?: string;
   phone?: string;
+  whatsapp?: string;
+  photoUrl?: string;
   type: string;
 }
 
@@ -23,6 +25,8 @@ export default function AttendantProfilePage() {
   const [success, setSuccess] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const router = useRouter();
   const { checkSession, logout } = useAttendantAuth();
 
@@ -61,6 +65,35 @@ export default function AttendantProfilePage() {
     setSuccess("");
   };
 
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validar tipo de arquivo
+      if (!file.type.startsWith('image/')) {
+        setError('Por favor, selecione apenas arquivos de imagem');
+        return;
+      }
+      
+      // Validar tamanho (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError('A imagem deve ter no máximo 5MB');
+        return;
+      }
+      
+      setPhotoFile(file);
+      
+      // Criar preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setPhotoPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+      
+      setError("");
+      setSuccess("");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -87,30 +120,55 @@ export default function AttendantProfilePage() {
     }
 
     try {
-      const updateData: any = {
-        name: formData.name.trim(),
-        phone: formData.phone.trim(),
-        whatsapp: formData.whatsapp.trim()
-      };
+      let response;
+      
+      if (photoFile) {
+        // Se há foto para upload, usar FormData
+        const formDataToSend = new FormData();
+        formDataToSend.append('name', formData.name.trim());
+        formDataToSend.append('phone', formData.phone.trim());
+        formDataToSend.append('whatsapp', formData.whatsapp.trim());
+        
+        if (formData.password) {
+          formDataToSend.append('password', formData.password);
+        }
+        
+        formDataToSend.append('photo', photoFile);
+        
+        response = await fetch(`/api/attendant/profile`, {
+          method: "PUT",
+          credentials: "include",
+          body: formDataToSend,
+        });
+      } else {
+        // Se não há foto, usar JSON normal
+        const updateData: any = {
+          name: formData.name.trim(),
+          phone: formData.phone.trim(),
+          whatsapp: formData.whatsapp.trim()
+        };
 
-      // Só incluir senha se foi preenchida
-      if (formData.password) {
-        updateData.password = formData.password;
+        // Só incluir senha se foi preenchida
+        if (formData.password) {
+          updateData.password = formData.password;
+        }
+
+        response = await fetch(`/api/attendant/profile`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify(updateData),
+        });
       }
-
-      const response = await fetch(`/api/attendant/profile`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify(updateData),
-      });
 
       if (response.ok) {
         const updatedAttendant = await response.json();
         setAttendant(updatedAttendant);
         setFormData(prev => ({ ...prev, password: "", confirmPassword: "" }));
+        setPhotoFile(null);
+        setPhotoPreview(null);
         setSuccess("Perfil atualizado com sucesso!");
       } else {
         const errorData = await response.json();
@@ -150,6 +208,55 @@ export default function AttendantProfilePage() {
         {/* Formulário */}
         <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Foto do Perfil */}
+            <div>
+              <h2 className="text-xl font-semibold text-white mb-4 flex items-center">
+                <Camera className="w-5 h-5 mr-2" />
+                Foto do Perfil
+              </h2>
+              
+              <div className="flex items-center space-x-6">
+                {/* Preview da foto */}
+                <div className="relative">
+                  <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-700 border-2 border-gray-600">
+                    {photoPreview ? (
+                      <img
+                        src={photoPreview}
+                        alt="Preview da foto"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : attendant?.photoUrl ? (
+                      <img
+                        src={attendant.photoUrl}
+                        alt="Foto atual"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <User className="w-8 h-8 text-gray-400" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Upload de foto */}
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Alterar Foto
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoChange}
+                    className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-600 file:text-white hover:file:bg-blue-700 file:cursor-pointer cursor-pointer"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Formatos aceitos: JPG, PNG, GIF. Tamanho máximo: 5MB
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {/* Informações Pessoais */}
             <div>
               <h2 className="text-xl font-semibold text-white mb-4 flex items-center">

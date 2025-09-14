@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Header from "@/app/components/Header";
 import { useAuth } from "../../hooks/useAuth";
+import EvolutionIntegration from "@/components/EvolutionIntegration";
 
 interface Integration {
   id: string;
@@ -26,6 +27,7 @@ export default function IntegracoesPage() {
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeIntegration, setActiveIntegration] = useState<string | null>(null);
+  const [evolutionStatus, setEvolutionStatus] = useState<string>('disconnected');
   
   // Verificar autenticação e permissão de admin
   const { isAdmin, userId, isLoading } = useAuth();
@@ -67,6 +69,44 @@ export default function IntegracoesPage() {
     }
 
     fetchIntegrations();
+  }, []);
+
+  // Monitorar mudanças na configuração da Evolution API
+  useEffect(() => {
+    const checkEvolutionStatus = () => {
+      try {
+        const evolutionConfig = localStorage.getItem('evolutionConfig');
+        if (evolutionConfig) {
+          const parsedConfig = JSON.parse(evolutionConfig);
+          setEvolutionStatus(parsedConfig.isConfigured ? 'connected' : 'disconnected');
+        } else {
+          setEvolutionStatus('disconnected');
+        }
+      } catch (error) {
+        console.error('Erro ao verificar status da Evolution API:', error);
+        setEvolutionStatus('disconnected');
+      }
+    };
+
+    // Verificar status inicial
+    checkEvolutionStatus();
+
+    // Escutar mudanças no localStorage
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'evolutionConfig') {
+        checkEvolutionStatus();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Verificar periodicamente para mudanças na mesma aba
+    const interval = setInterval(checkEvolutionStatus, 1000);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
   }, []);
   
   if (isLoading) {
@@ -162,8 +202,15 @@ export default function IntegracoesPage() {
         </div>
       ) : (
         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-          {integrations.map((integration) => {
+          {integrations.filter(integration => integration.id === "evolution").map((integration) => {
             const config: IntegrationConfig = JSON.parse(integration.config);
+            
+            // Para Evolution API, usar o status monitorado
+            let actualStatus = config.status;
+            if (integration.id === "evolution") {
+              actualStatus = evolutionStatus;
+            }
+            
             return (
               <div
                 key={integration.id}
@@ -171,7 +218,17 @@ export default function IntegracoesPage() {
               >
               <div className="p-6 flex justify-between items-center">
                 <div className="flex items-center">
-                  <div className="text-2xl mr-4">{config.icon}</div>
+                  <div className="text-2xl mr-4 flex items-center">
+                    {integration.id === "evolution" ? (
+                      <img 
+                        src="https://evolution.bpofinanceiro.shop/assets/images/evolution-logo.png" 
+                        alt="Evolution API Logo" 
+                        className="w-8 h-8 object-contain mr-2"
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
+                    ) : null}
+                    {config.icon}
+                  </div>
                   <div>
                     <h3 className="text-xl font-semibold text-white">{integration.name}</h3>
                     <p className="text-gray-400">{integration.type}</p>
@@ -186,11 +243,11 @@ export default function IntegracoesPage() {
                 <div className="flex items-center">
                   <span
                     className={`inline-block w-3 h-3 rounded-full mr-2 ${
-                      config.status === "connected" ? "bg-green-500" : "bg-red-500"
+                      actualStatus === "connected" ? "bg-green-500" : "bg-red-500"
                     }`}
                   ></span>
                   <span className="text-sm text-gray-300">
-                    {config.status === "connected" ? "Conectado" : "Desconectado"}
+                    {actualStatus === "connected" ? "Conectado" : "Desconectado"}
                   </span>
                   <button
                     onClick={() => setActiveIntegration(integration.id === activeIntegration ? null : integration.id)}
@@ -271,44 +328,11 @@ export default function IntegracoesPage() {
                 )}
                 
                 {integration.id === "evolution" && (
-                  <div>
-                    <h4 className="text-lg font-medium text-white mb-4">Configuração da Evolution API</h4>
-                    <p className="text-gray-300 mb-4">
-                      Configure a integração com a Evolution API para WhatsApp.
-                    </p>
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div>
-                        <label className="block text-gray-300 mb-2">URL da API</label>
-                        <input
-                          type="text"
-                          className="w-full p-2 bg-gray-700 text-white rounded"
-                          placeholder="https://sua-api.exemplo.com"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-gray-300 mb-2">API Key</label>
-                        <input
-                          type="password"
-                          className="w-full p-2 bg-gray-700 text-white rounded"
-                          placeholder="Sua API Key"
-                        />
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => toggleIntegration("evolution")}
-                      disabled={!isAdmin}
-                      className={`px-4 py-2 rounded font-medium transition-colors ${
-                        !isAdmin 
-                          ? 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50'
-                          : JSON.parse(integration.config).status === "connected"
-                          ? "bg-red-600 hover:bg-red-700 text-white"
-                          : "bg-green-600 hover:bg-green-700 text-white"
-                      }`}
-                      title={!isAdmin ? "Sem permissão para alterar" : ""}
-                    >
-                      {JSON.parse(integration.config).status === "connected" ? "Desconectar" : "Conectar"}
-                    </button>
-                  </div>
+                  <EvolutionIntegration 
+                    integration={integration} 
+                    isAdmin={isAdmin} 
+                    onToggle={() => toggleIntegration("evolution")}
+                  />
                 )}
                 
                 {integration.id === "chatwoot" && (

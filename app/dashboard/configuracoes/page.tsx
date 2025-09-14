@@ -7,26 +7,26 @@ import HelpModal from "@/app/components/HelpModal";
 import { getHelpData } from '@/app/data/helpData';
 import { useState, useEffect } from "react";
 import { useAuth } from "../../hooks/useAuth";
+import { useSettings } from "../../contexts/SettingsContext";
 
 export default function ConfiguracoesPage() {
   const router = useRouter();
   
   const { isAdmin, userId, isLoading } = useAuth();
+  const { settings, updateSettings, isLoading: settingsLoading } = useSettings();
 
   const [formData, setFormData] = useState({
     nomeEmpresa: "",
     email: "",
     telefone: "",
-    endereco: "",
-    webhookUrl: "",
-    apiKey: "",
-    tema: "escuro"
+    url: "",
+    tema: "escuro" as "claro" | "escuro"
   });
-  const [dataLoading, setDataLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const helpData = getHelpData('configuracoes');
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
 
 
@@ -39,10 +39,28 @@ export default function ConfiguracoesPage() {
     }
   }, [router]);
 
-  // Configurações removidas - funcionalidade não disponível
+  // Carregar configurações do contexto
   useEffect(() => {
-    setDataLoading(false);
-  }, []);
+    if (!settingsLoading) {
+      setFormData({
+        nomeEmpresa: settings.nomeEmpresa,
+        email: settings.email,
+        telefone: settings.telefone,
+        url: settings.url,
+        tema: settings.tema
+      });
+    }
+  }, [settings, settingsLoading]);
+
+  // Limpar mensagem de sucesso após 3 segundos
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => {
+        setSuccessMessage(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
 
   // Verificar autenticação e permissão de admin
   if (isLoading) {
@@ -74,9 +92,27 @@ export default function ConfiguracoesPage() {
     }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert("Funcionalidade de configurações não disponível.");
+    setSaving(true);
+    setError(null);
+    
+    try {
+      // Atualizar configurações no contexto
+      updateSettings({
+        nomeEmpresa: formData.nomeEmpresa,
+        email: formData.email,
+        telefone: formData.telefone,
+        url: formData.url,
+        tema: formData.tema
+      });
+      
+      setSuccessMessage('Configurações salvas com sucesso!');
+    } catch (error) {
+      setError('Erro ao salvar configurações. Tente novamente.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -100,22 +136,24 @@ export default function ConfiguracoesPage() {
       </div>
       
       <div className="mt-6 max-w-4xl mx-auto">
-        {dataLoading ? (
+        {settingsLoading ? (
           <div className="text-center py-10">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mb-4"></div>
             <p>Carregando configurações...</p>
           </div>
-        ) : error ? (
-          <div className="bg-red-900/30 border border-red-500 text-red-200 p-4 rounded-md mb-6">
-            {error}
-            <button 
-              onClick={() => window.location.reload()} 
-              className="ml-4 underline hover:text-white"
-            >
-              Tentar novamente
-            </button>
-          </div>
         ) : (
+          <>
+            {error && (
+              <div className="bg-red-900/30 border border-red-500 text-red-200 p-4 rounded-md mb-6">
+                {error}
+              </div>
+            )}
+            
+            {successMessage && (
+              <div className="bg-green-900/30 border border-green-500 text-green-200 p-4 rounded-md mb-6">
+                {successMessage}
+              </div>
+            )}
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="bg-gray-800 p-6 rounded-lg shadow-md">
               <h2 className="text-xl font-semibold mb-4 border-b border-gray-700 pb-2">Informações da Empresa</h2>
@@ -155,40 +193,13 @@ export default function ConfiguracoesPage() {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Endereço</label>
+                <label className="block text-sm font-medium text-gray-300 mb-1">URL/Website</label>
                 <input
-                  type="text"
-                  name="endereco"
-                  value={formData.endereco}
+                  type="url"
+                  name="url"
+                  value={formData.url}
                   onChange={handleChange}
-                  className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-gray-800 p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold mb-4 border-b border-gray-700 pb-2">Integrações</h2>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">URL do Webhook</label>
-                <input
-                  type="text"
-                  name="webhookUrl"
-                  value={formData.webhookUrl}
-                  onChange={handleChange}
-                  className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Chave de API</label>
-                <input
-                  type="password"
-                  name="apiKey"
-                  value={formData.apiKey}
-                  onChange={handleChange}
+                  placeholder="https://exemplo.com"
                   className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -243,7 +254,8 @@ export default function ConfiguracoesPage() {
             </button>
           </div>
         </form>
-      )}
+          </>
+        )}
       </div>
       
       {/* Modal de Ajuda */}

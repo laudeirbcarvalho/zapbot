@@ -15,6 +15,7 @@ interface Attendant {
   email: string;
   phone?: string;
   cpf?: string;
+  photoUrl?: string;
   position?: { id: string; name: string } | null;
   function?: { id: string; name: string } | null;
   department?: { id: string; name: string } | null;
@@ -274,8 +275,22 @@ export default function AttendantsPage() {
               <div className="p-6 pb-4">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className="h-12 w-12 bg-blue-900 text-blue-300 rounded-full flex items-center justify-center font-medium">
-                      {getInitials(attendant.name)}
+                    <div className="h-12 w-12 rounded-full overflow-hidden flex items-center justify-center">
+                      {attendant.photoUrl ? (
+                        <img 
+                          src={attendant.photoUrl} 
+                          alt={attendant.name}
+                          className="w-full h-full object-cover rounded-full"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            target.nextElementSibling?.classList.remove('hidden');
+                          }}
+                        />
+                      ) : null}
+                      <div className={`h-12 w-12 bg-blue-900 text-blue-300 rounded-full flex items-center justify-center font-medium ${attendant.photoUrl ? 'hidden' : ''}`}>
+                        {getInitials(attendant.name)}
+                      </div>
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold text-white">{attendant.name}</h3>

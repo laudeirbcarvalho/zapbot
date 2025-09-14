@@ -8,6 +8,7 @@ interface AttendantPayload {
   type: string;
   position?: string;
   department?: string;
+  photoUrl?: string;
 }
 
 // Middleware para verificar autenticação de atendente

@@ -10,6 +10,7 @@ interface Attendant {
   phone?: string;
   whatsapp?: string;
   cpf?: string;
+  photoUrl?: string;
   position?: { id: string; name: string } | null;
   function?: { id: string; name: string } | null;
   department?: { id: string; name: string } | null;
@@ -46,8 +47,11 @@ export default function EditAttendantModal({ attendant, onClose, onSuccess }: Ed
     startTime: '',
     endTime: '',
     workDays: [] as string[],
-    isActive: true
+    isActive: true,
+    photoUrl: ''
   });
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [positions, setPositions] = useState<Array<{id: string, name: string}>>([]);
@@ -131,8 +135,12 @@ export default function EditAttendantModal({ attendant, onClose, onSuccess }: Ed
         startTime: attendant.startTime || '',
         endTime: attendant.endTime || '',
         workDays: workDaysArray,
-        isActive: attendant.isActive
+        isActive: attendant.isActive,
+        photoUrl: attendant.photoUrl || ''
       });
+      
+      // Definir preview da foto atual
+      setPhotoPreview(attendant.photoUrl || null);
     }
   }, [attendant]);
 
@@ -157,6 +165,34 @@ export default function EditAttendantModal({ attendant, onClose, onSuccess }: Ed
     }
   };
 
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validar tamanho do arquivo (máx. 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError('A foto deve ter no máximo 5MB');
+        return;
+      }
+
+      // Validar tipo do arquivo
+      if (!file.type.startsWith('image/')) {
+        setError('Por favor, selecione apenas arquivos de imagem');
+        return;
+      }
+
+      setPhotoFile(file);
+      
+      // Criar preview da imagem
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setPhotoPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+      
+      setError(null);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -170,6 +206,31 @@ export default function EditAttendantModal({ attendant, onClose, onSuccess }: Ed
         return;
       }
 
+      let photoUrl = formData.photoUrl;
+      
+      // Upload da nova foto se houver uma selecionada
+      if (photoFile) {
+        const photoFormData = new FormData();
+        photoFormData.append('file', photoFile);
+        
+        const uploadResponse = await fetch('/api/upload/attendant-photo', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: photoFormData
+        });
+        
+        if (uploadResponse.ok) {
+          const uploadData = await uploadResponse.json();
+          photoUrl = uploadData.url;
+        } else {
+          setError('Erro ao fazer upload da foto');
+          setLoading(false);
+          return;
+        }
+      }
+
       const response = await fetch(`/api/attendants/${attendant.id}`, {
         method: 'PUT',
         headers: {
@@ -178,6 +239,7 @@ export default function EditAttendantModal({ attendant, onClose, onSuccess }: Ed
         },
         body: JSON.stringify({
           ...formData,
+          photoUrl,
           workDays: formData.workDays.join(',')
         })
       });
@@ -307,6 +369,39 @@ export default function EditAttendantModal({ attendant, onClose, onSuccess }: Ed
                   className="w-full px-3 py-2 bg-gray-800 border border-gray-600 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="000.000.000-00"
                 />
+              </div>
+            </div>
+
+            {/* Foto do Atendente */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Foto do Atendente
+              </label>
+              <div className="flex items-center space-x-4">
+                <div className="h-16 w-16 rounded-full overflow-hidden bg-gray-700 flex items-center justify-center">
+                  {photoPreview ? (
+                    <img 
+                      src={photoPreview} 
+                      alt="Preview" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="text-gray-400 text-2xl">
+                      👤
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoChange}
+                    className="w-full px-3 py-2 bg-gray-800 border border-gray-600 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    Formatos aceitos: JPG, PNG, GIF (máx. 5MB)
+                  </p>
+                </div>
               </div>
             </div>
 

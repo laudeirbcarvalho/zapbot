@@ -8,35 +8,34 @@ datasource db {
 }
 
 model User {
-  id          String       @id @default(uuid())
-  name        String
-  email       String       @unique
-  password    String
-  userType    UserType     @default(MANAGER)
-  isSuperAdmin Boolean     @default(false)
-  accountId   String?      // ID da conta/empresa do usuário
-  adminId     String?      // ID do administrador (para gerentes)
-  isActive    Boolean      @default(true)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  attendances Attendance[]
-  createdLeads Lead[]      @relation("UserCreatedLeads")
-  managedAttendants Attendant[] @relation("ManagerAttendants")
-  adminAttendants Attendant[] @relation("AdminAttendants")
-  managedManagers User[]     @relation("AdminManagers")
-  admin       User?        @relation("AdminManagers", fields: [adminId], references: [id])
+  id                String       @id @default(uuid())
+  name              String
+  email             String       @unique
+  password          String
+  userType          UserType     @default(MANAGER)
+  isSuperAdmin      Boolean      @default(false)
+  accountId         String?
+  tenantId          String?
+  adminId           String?
+  isActive          Boolean      @default(true)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  attendances       Attendance[]
+  adminAttendants   Attendant[]  @relation("AdminAttendants")
+  managedAttendants Attendant[]  @relation("ManagerAttendants")
+  createdLeads      Lead[]       @relation("UserCreatedLeads")
+  admin             User?        @relation("AdminManagers", fields: [adminId], references: [id])
+  managedManagers   User[]       @relation("AdminManagers")
+  Tenant            Tenant?      @relation(fields: [tenantId], references: [id])
 
   @@index([adminId])
-}
-
-enum UserType {
-  ADMIN
-  MANAGER
+  @@index([tenantId])
 }
 
 model SystemSettings {
   id          String   @id @default(uuid())
-  key         String   @unique
+  tenantId    String
+  key         String
   value       String
   type        String   @default("string")
   category    String   @default("general")
@@ -44,8 +43,12 @@ model SystemSettings {
   isPublic    Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-}
+  Tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
+  @@unique([tenantId, key])
+  @@index([category])
+  @@index([tenantId])
+}
 
 model Lead {
   id          String       @id @default(uuid())
@@ -54,7 +57,7 @@ model Lead {
   phone       String?
   source      String?
   status      String       @default("novo")
-  notes       String?      @db.Text
+  notes       String?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   deletedAt   DateTime?
@@ -62,26 +65,29 @@ model Lead {
   columnId    String?
   position    Int          @default(0)
   attendantId String?
-  createdBy   String?      // ID do usuário que criou o lead
-  column      Column?      @relation(fields: [columnId], references: [id])
-  attendant   Attendant?   @relation("AttendantLeads", fields: [attendantId], references: [id])
-  creator     User?        @relation("UserCreatedLeads", fields: [createdBy], references: [id])
+  createdBy   String?
+  tenantId    String?
   attendances Attendance[]
+  attendant   Attendant?   @relation("AttendantLeads", fields: [attendantId], references: [id])
+  column      Column?      @relation(fields: [columnId], references: [id])
+  creator     User?        @relation("UserCreatedLeads", fields: [createdBy], references: [id])
+  Tenant      Tenant?      @relation(fields: [tenantId], references: [id])
   ratings     Rating[]
 
   @@index([columnId])
   @@index([attendantId])
   @@index([createdBy])
   @@index([deletedAt])
+  @@index([tenantId])
 }
 
 model Column {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   title     String
-  position  Int      @default(0)
-  color     String   @default("#6B7280") // Cor padrão cinza
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  position  Int       @default(0)
+  color     String    @default("#6B7280")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   deletedAt DateTime?
   deletedBy String?
   leads     Lead[]
@@ -93,31 +99,31 @@ model Integration {
   id        String   @id @default(uuid())
   name      String
   type      String
-  config    String   @db.Text
+  config    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Attendance {
-  id          String      @id @default(uuid())
+  id          String    @id @default(uuid())
   leadId      String
   userId      String?
-  type        String      // "call", "email", "meeting", "whatsapp", "note", "follow_up"
+  type        String
   subject     String?
-  description String?     @db.Text
-  status      String      @default("pending") // "pending", "completed", "cancelled"
-  priority    String      @default("medium") // "low", "medium", "high", "urgent"
+  description String?
+  status      String    @default("pending")
+  priority    String    @default("medium")
   scheduledAt DateTime?
   completedAt DateTime?
-  duration    Int?        // em minutos
-  outcome     String?     // "successful", "no_answer", "callback", "not_interested", "converted"
-  nextAction  String?     @db.Text
-  tags        String?     // tags separadas por vírgula
-  attachments String?     @db.Text // URLs ou paths dos anexos
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  lead        Lead        @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  user        User?       @relation(fields: [userId], references: [id])
+  duration    Int?
+  outcome     String?
+  nextAction  String?
+  tags        String?
+  attachments String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lead        Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user        User?     @relation(fields: [userId], references: [id])
 
   @@index([leadId])
   @@index([userId])
@@ -159,26 +165,28 @@ model Attendant {
   id           String      @id @default(uuid())
   name         String
   email        String      @unique
-  password     String?     // senha para login do atendente
+  password     String?
   phone        String?
   cpf          String?     @unique
   positionId   String?
   functionId   String?
   departmentId String?
-  managerId    String?     // ID do gerente responsável
-  adminId      String?     // ID do administrador (hierarquia)
-  startTime    String      // horário de início (formato HH:mm)
-  endTime      String      // horário de fim (formato HH:mm)
-  workDays     String      // dias da semana (ex: "1,2,3,4,5" para seg-sex)
+  managerId    String?
+  adminId      String?
+  tenantId     String?
+  startTime    String
+  endTime      String
+  workDays     String
   isActive     Boolean     @default(true)
-  canLogin     Boolean     @default(false) // se o atendente pode fazer login
+  canLogin     Boolean     @default(false)
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
-  position     Position?   @relation(fields: [positionId], references: [id])
-  function     Function?   @relation(fields: [functionId], references: [id])
-  department   Department? @relation(fields: [departmentId], references: [id])
-  manager      User?       @relation("ManagerAttendants", fields: [managerId], references: [id])
   admin        User?       @relation("AdminAttendants", fields: [adminId], references: [id])
+  department   Department? @relation(fields: [departmentId], references: [id])
+  function     Function?   @relation(fields: [functionId], references: [id])
+  manager      User?       @relation("ManagerAttendants", fields: [managerId], references: [id])
+  position     Position?   @relation(fields: [positionId], references: [id])
+  Tenant       Tenant?     @relation(fields: [tenantId], references: [id])
   leads        Lead[]      @relation("AttendantLeads")
   ratings      Rating[]
 
@@ -187,16 +195,17 @@ model Attendant {
   @@index([departmentId])
   @@index([managerId])
   @@index([adminId])
+  @@index([tenantId])
 }
 
 model Rating {
   id          String    @id @default(uuid())
   attendantId String
   leadId      String?
-  score       Int       // pontuação de 1 a 5
-  type        String    // "elogio", "critica", "avaliacao"
-  comment     String?   @db.Text
-  ratedBy     String?   // quem fez a avaliação
+  score       Int
+  type        String
+  comment     String?
+  ratedBy     String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   attendant   Attendant @relation(fields: [attendantId], references: [id], onDelete: Cascade)
@@ -205,4 +214,29 @@ model Rating {
   @@index([attendantId])
   @@index([leadId])
   @@index([type])
+}
+
+model Tenant {
+  id             String           @id
+  name           String
+  slug           String           @unique
+  domain         String?          @unique
+  email          String?
+  password       String?
+  logo           String?
+  isActive       Boolean          @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime
+  Attendant      Attendant[]
+  Lead           Lead[]
+  SystemSettings SystemSettings[]
+  User           User[]
+
+  @@index([domain])
+  @@index([slug])
+}
+
+enum UserType {
+  ADMIN
+  MANAGER
 }

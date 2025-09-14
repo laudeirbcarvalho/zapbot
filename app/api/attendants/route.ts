@@ -46,12 +46,19 @@ export const GET = withAuth(async (request: Request) => {
           whereClause.managerId = 'invalid';
         }
       } else {
+        // Buscar gerentes deste admin
+        const managers = await prisma.user.findMany({
+          where: { adminId: user.id, userType: 'MANAGER' },
+          select: { id: true }
+        });
+        const managerIds = managers.map(m => m.id);
+        
         // Filtrar por atendentes associados diretamente ao admin ou via seus gerentes
         whereClause.OR = [
           { adminId: user.id }, // Atendentes diretamente associados ao admin
           { 
-            manager: {
-              adminId: user.id // Atendentes de gerentes deste admin
+            managerId: {
+              in: managerIds
             }
           }
         ];
@@ -64,7 +71,7 @@ export const GET = withAuth(async (request: Request) => {
       whereClause.managerId = 'invalid';
     }
     
-    const attendants = await prisma.Attendant.findMany({
+    const attendants = await prisma.attendant.findMany({
       where: whereClause,
       include: {
         position: {
@@ -162,7 +169,7 @@ export const GET = withAuth(async (request: Request) => {
 // POST - Criar novo atendente
 export const POST = withAuth(async (request: Request) => {
   try {
-    const { name, email, password, phone, cpf, positionId, functionId, department, managerId, startTime, endTime, workDays } = await request.json();
+    const { name, email, password, phone, cpf, positionId, functionId, department, managerId, startTime, endTime, workDays, photoUrl } = await request.json();
 
     if (!name || !email || !password || !positionId || !functionId || !startTime || !endTime || !workDays) {
       return NextResponse.json(
@@ -183,6 +190,7 @@ export const POST = withAuth(async (request: Request) => {
         password: hashedPassword,
         phone,
         cpf,
+        photoUrl,
         positionId,
         functionId,
         departmentId: department,

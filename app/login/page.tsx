@@ -2,10 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useSettings } from "../contexts/SettingsContext";
 
 
 export default function LoginPage() {
   const router = useRouter();
+  const { settings } = useSettings();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -77,7 +79,7 @@ export default function LoginPage() {
         <div className="bg-gray-800 p-8 rounded-lg shadow-lg w-full max-w-md">
           <div className="flex flex-col items-center mb-6">
             <h1 className="text-3xl font-bold text-center text-white">
-              ZapBot
+              {settings.nomeEmpresa}
             </h1>
           </div>
           <h2 className="text-xl text-center text-gray-300 mb-6">Recuperar Senha</h2>
@@ -132,7 +134,7 @@ export default function LoginPage() {
         <div className="bg-gray-800 p-8 rounded-lg shadow-lg">
           <div className="flex flex-col items-center mb-6">
             <h1 className="text-3xl font-bold text-center text-white">
-              ZapBot
+              {settings.nomeEmpresa}
             </h1>
           </div>
           <h2 className="text-xl text-center text-gray-300 mb-6">Faça login para acessar o dashboard</h2>

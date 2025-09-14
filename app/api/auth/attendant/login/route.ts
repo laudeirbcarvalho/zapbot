@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
         type: "attendant",
         position: attendant.position?.name,
         department: attendant.department?.name,
+        photoUrl: attendant.photoUrl,
       },
       process.env.NEXTAUTH_SECRET || "fallback-secret",
       { expiresIn: "8h" }
@@ -77,6 +78,7 @@ export async function POST(request: NextRequest) {
         email: attendant.email,
         position: attendant.position?.name,
         department: attendant.department?.name,
+        photoUrl: attendant.photoUrl,
         type: "attendant",
       },
     });
