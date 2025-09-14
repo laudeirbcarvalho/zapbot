@@ -23,6 +23,9 @@ export async function authenticatedFetch(url: string, options: ApiOptions = {}) 
 
   const headers: Record<string, string> = {
     'Authorization': `Bearer ${token}`,
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0',
     ...options.headers,
   };
 
@@ -57,6 +60,9 @@ export async function publicFetch(url: string, options: ApiOptions = {}) {
     method: options.method || 'GET',
     headers: {
       'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
       ...options.headers,
     },
   };

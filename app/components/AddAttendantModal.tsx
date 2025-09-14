@@ -104,6 +104,33 @@ export default function AddAttendantModal({ onClose, onSuccess }: AddAttendantMo
             setFormData(prev => ({ ...prev, managerId: userId }));
           }
           
+          // Se for administrador, pré-preencher com ele mesmo como gerente responsável
+          if (userType === 'ADMIN' && userId) {
+            // Obter nome do usuário logado do storage
+            const userData = sessionStorage.getItem('user') || localStorage.getItem('user');
+            let currentUserName = 'Administrador Atual';
+            if (userData) {
+              try {
+                const user = JSON.parse(userData);
+                currentUserName = user.name || 'Administrador Atual';
+              } catch (e) {
+                console.error('Erro ao parsear dados do usuário:', e);
+              }
+            }
+            
+            // Adicionar o administrador à lista de gerentes se não estiver
+            const adminExists = managersList.find(manager => manager.id === userId);
+            if (!adminExists) {
+              const currentAdminData = {
+                id: userId,
+                name: currentUserName
+              };
+              managersList = [currentAdminData, ...managersList];
+            }
+            
+            setFormData(prev => ({ ...prev, managerId: userId }));
+          }
+          
           setManagers(managersList);
         }
       } catch (error) {

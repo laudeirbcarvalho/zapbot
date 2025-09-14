@@ -16,7 +16,10 @@ export const GET = withAuth(async (request: NextRequest) => {
       deletedAt: null,
     };
 
-    // Removido filtro por tenantId - sistema single-tenant
+    // Adicionar filtro por tenantId se o usuário pertencer a um tenant específico
+    if (user.tenantId) {
+      whereClause.tenantId = user.tenantId;
+    }
     
     // Filtrar baseado no tipo de usuário
     if (user.isSuperAdmin) {
@@ -205,6 +208,7 @@ export const POST = withAuth(async (request: NextRequest) => {
         position: 0,
         createdBy: user.id, // Associar o usuário que criou o lead
         attendantId: finalAttendantId, // Usar o atendente determinado
+        tenantId: user.tenantId, // Associar ao tenant do usuário
       },
       include: {
         attendant: {

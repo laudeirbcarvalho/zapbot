@@ -11,6 +11,7 @@ interface AuthUser {
   userType: 'ADMIN' | 'MANAGER';
   isSuperAdmin: boolean;
   accountId: string | null;
+  tenantId: string | null;
   isActive: boolean;
 }
 
@@ -52,6 +53,7 @@ export async function getUserFromRequest(request: NextRequest): Promise<AuthUser
         userType: true,
         isSuperAdmin: true,
         accountId: true,
+        tenantId: true,
         isActive: true
       }
     });

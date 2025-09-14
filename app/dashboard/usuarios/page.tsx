@@ -260,13 +260,22 @@ export default function UsersPage() {
               <span>❓</span>
               Ajuda
             </button>
-            {isAdmin && (
+            {isSuperAdmin && (
               <button
                 onClick={() => setShowAddModal(true)}
                 className="px-4 py-2 rounded-md flex items-center gap-2 transition-colors bg-blue-600 hover:bg-blue-700 text-white"
               >
                 <PlusIcon className="h-5 w-5" />
                 Novo Usuário
+              </button>
+            )}
+            {isAdmin && !isSuperAdmin && (
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="px-4 py-2 rounded-md flex items-center gap-2 transition-colors bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <PlusIcon className="h-5 w-5" />
+                Novo Gerente
               </button>
             )}
           </div>
@@ -407,7 +416,7 @@ export default function UsersPage() {
                         <PencilIcon className="h-5 w-5" />
                       </button>
                     )}
-                    {isAdmin && !user.isSuperAdmin && (
+                    {((isAdmin && !user.isSuperAdmin && user.id !== userId && user.userType !== 'ADMIN') || (isSuperAdmin && !user.isSuperAdmin && user.id !== userId)) && (
                       <button
                         onClick={() => handleDeleteUser(user.id)}
                         className="transition-colors text-red-600 hover:text-red-900"

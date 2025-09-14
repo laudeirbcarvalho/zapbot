@@ -19,45 +19,98 @@ export const GET = withAuth(async (request: NextRequest) => {
     // Base filter - filtrar por tenant e permissões de usuário
     let baseFilter: any = {};
     
-    // Filtrar por tenant se não for Super Admin
-    // Removido filtro por tenantId - sistema single-tenant
+    // Adicionar filtro por tenantId se o usuário pertencer a um tenant específico
+    if (user.tenantId) {
+      baseFilter.tenantId = user.tenantId;
+    }
     
-    if (!isAdmin) {
-      if (isManager) {
-        // Buscar IDs dos atendentes do gerente
-        const attendants = await prisma.attendant.findMany({
-          where: { managerId: user.id },
-          select: { id: true, name: true }
-        });
-        const attendantIds = attendants.map(a => a.id);
-        
-        if (attendantIds.length > 0) {
-          baseFilter = {
-            ...baseFilter,
-            OR: [
-              { attendantId: { in: attendantIds } },
-              { createdBy: user.id }
-            ]
-          };
-        } else {
-          // Se não tem atendentes, só mostra leads criados pelo próprio gerente
-          baseFilter = {
-            ...baseFilter,
-            createdBy: user.id
-          };
+    if (isAdmin) {
+      // Admin vê apenas leads de sua hierarquia (seus gerentes e atendentes)
+      const managersFromAdmin = await prisma.user.findMany({
+        where: {
+          userType: 'MANAGER',
+          adminId: user.id,
+          isActive: true
+        },
+        select: {
+          id: true
         }
-        
-
-      } else {
-        // Atendente vê apenas seus próprios leads
-        baseFilter = {
-          ...baseFilter,
+      });
+      
+      const managerIds = managersFromAdmin.map(manager => manager.id);
+      
+      // Buscar atendentes deste admin (diretamente ou via gerentes)
+      const teamAttendants = await prisma.attendant.findMany({
+        where: {
           OR: [
-            { attendantId: user.id },
-            { createdBy: user.id }
-          ]
-        };
+            { adminId: user.id }, // Atendentes diretamente associados ao admin
+            { 
+              managerId: {
+                in: managerIds // Atendentes dos gerentes deste admin
+              }
+            }
+          ],
+          isActive: true,
+          tenantId: user.tenantId // Filtrar por tenant
+        },
+        select: {
+          id: true
+        }
+      });
+      
+      const teamAttendantIds = teamAttendants.map(att => att.id);
+      
+      // Filtrar leads: da hierarquia do admin OU não atribuídos (mas do mesmo tenant)
+      if (teamAttendantIds.length > 0) {
+        baseFilter.OR = [
+          {
+            attendantId: {
+              in: teamAttendantIds
+            }
+          },
+          {
+            attendantId: null // Leads não atribuídos do mesmo tenant
+          },
+          {
+            createdBy: user.id // Leads criados pelo próprio admin
+          },
+          {
+            createdBy: { in: managerIds } // Leads criados pelos gerentes
+          }
+        ];
+      } else {
+        // Se não tem atendentes, mostrar apenas leads não atribuídos do mesmo tenant e criados pelo admin
+        baseFilter.OR = [
+          { attendantId: null },
+          { createdBy: user.id }
+        ];
       }
+    } else if (isManager) {
+      // Buscar IDs dos atendentes do gerente
+      const attendants = await prisma.attendant.findMany({
+        where: { 
+          managerId: user.id,
+          tenantId: user.tenantId // Filtrar por tenant
+        },
+        select: { id: true, name: true }
+      });
+      const attendantIds = attendants.map(a => a.id);
+      
+      if (attendantIds.length > 0) {
+        baseFilter.OR = [
+          { attendantId: { in: attendantIds } },
+          { createdBy: user.id }
+        ];
+      } else {
+        // Se não tem atendentes, só mostra leads criados pelo próprio gerente
+        baseFilter.createdBy = user.id;
+      }
+    } else {
+      // Atendente vê apenas seus próprios leads
+      baseFilter.OR = [
+        { attendantId: user.id },
+        { createdBy: user.id }
+      ];
     }
 
     // Total de leads
@@ -209,12 +262,14 @@ export const GET = withAuth(async (request: NextRequest) => {
     if (isAdmin) {
       const attendants = await prisma.attendant.findMany({
         where: {
-          isActive: true
+          isActive: true,
+          tenantId: user.tenantId // Filtrar por tenant
         },
         select: {
           id: true,
           name: true,
           email: true,
+          photoUrl: true,
           _count: {
             select: {
               leads: true
@@ -242,12 +297,14 @@ export const GET = withAuth(async (request: NextRequest) => {
       const attendants = await prisma.attendant.findMany({
         where: {
           isActive: true,
-          managerId: user.id
+          managerId: user.id,
+          tenantId: user.tenantId // Filtrar por tenant
         },
         select: {
           id: true,
           name: true,
           email: true,
+          photoUrl: true,
           _count: {
             select: {
               leads: true

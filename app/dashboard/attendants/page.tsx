@@ -278,7 +278,7 @@ export default function AttendantsPage() {
                     <div className="h-12 w-12 rounded-full overflow-hidden flex items-center justify-center">
                       {attendant.photoUrl ? (
                         <img 
-                          src={attendant.photoUrl} 
+                          src={`${attendant.photoUrl}?t=${Date.now()}`} 
                           alt={attendant.name}
                           className="w-full h-full object-cover rounded-full"
                           onError={(e) => {

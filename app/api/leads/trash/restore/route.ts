@@ -18,11 +18,18 @@ export const POST = withAuth(async (request: NextRequest) => {
     }
     
     // Verificar se o lead existe na lixeira
-    const existingLead = await prisma.lead.findUnique({
-      where: {
-        id: leadId,
-        deletedAt: { not: null }
-      }
+    const whereClause: any = {
+      id: leadId,
+      deletedAt: { not: null }
+    };
+    
+    // Adicionar filtro por tenantId se o usuário pertencer a um tenant específico
+    if (user.tenantId) {
+      whereClause.tenantId = user.tenantId;
+    }
+    
+    const existingLead = await prisma.lead.findFirst({
+      where: whereClause
     });
     
     if (!existingLead) {

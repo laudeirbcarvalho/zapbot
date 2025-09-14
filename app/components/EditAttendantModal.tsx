@@ -140,7 +140,7 @@ export default function EditAttendantModal({ attendant, onClose, onSuccess }: Ed
       });
       
       // Definir preview da foto atual
-      setPhotoPreview(attendant.photoUrl || null);
+      setPhotoPreview(attendant.photoUrl ? `${attendant.photoUrl}?t=${Date.now()}` : null);
     }
   }, [attendant]);
 

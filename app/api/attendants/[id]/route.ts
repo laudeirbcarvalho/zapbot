@@ -55,7 +55,7 @@ export const PUT = withAuth(async (
 ) => {
   try {
     const body = await request.json();
-    const { name, email, password, phone, cpf, positionId, functionId, departmentId, managerId, startTime, endTime, workDays, isActive, photoUrl } = body;
+    const { name, email, password, phone, cpf, photoUrl, positionId, functionId, departmentId, managerId, startTime, endTime, workDays, isActive } = body;
 
     // Validações básicas
     if (!name || !email || !positionId || !functionId || !startTime || !endTime) {
@@ -88,6 +88,7 @@ export const PUT = withAuth(async (
       email,
       phone: phone || null,
       cpf: cpf || null,
+      photoUrl: photoUrl || null,
       positionId,
       functionId,
       departmentId: departmentId || null,
@@ -96,7 +97,6 @@ export const PUT = withAuth(async (
       endTime,
       workDays: workDays || '',
       isActive: isActive !== undefined ? isActive : true,
-      photoUrl: photoUrl || null,
       updatedAt: new Date()
     };
 

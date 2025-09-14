@@ -71,10 +71,18 @@ export async function POST(request: NextRequest) {
 
     console.log('📁 [IMPORT] Arquivo recebido:', file.name, file.size);
 
-    // Verificar se é um arquivo Excel
-    if (!file.name.match(/\.(xlsx|xls)$/i)) {
+    // Verificar se é um arquivo Excel (por extensão e MIME type)
+    const isExcelByName = file.name.match(/\.(xlsx|xls)$/i);
+    const isExcelByType = file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || 
+                         file.type === 'application/vnd.ms-excel' ||
+                         file.type === 'application/octet-stream'; // Alguns browsers enviam como octet-stream
+    
+    if (!isExcelByName && !isExcelByType) {
+      console.log('❌ [IMPORT] Arquivo rejeitado - Nome:', file.name, 'Tipo:', file.type);
       return NextResponse.json({ error: 'Formato de arquivo inválido. Use .xlsx ou .xls' }, { status: 400 });
     }
+    
+    console.log('✅ [IMPORT] Arquivo Excel válido - Nome:', file.name, 'Tipo:', file.type);
 
     // Ler arquivo Excel
     const buffer = await file.arrayBuffer();
@@ -102,7 +110,6 @@ export async function POST(request: NextRequest) {
     const firstColumn = columns[0];
     let importedCount = 0;
     let skippedCount = 0;
-    let duplicatesFound: any[] = [];
 
     // Processar cada linha do Excel
     for (const row of data as any[]) {
@@ -117,65 +124,57 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        // Verificar se o lead já existe
-        const existingLead = await prisma.lead.findFirst({
-          where: {
-            OR: [
-              phone ? { phone } : {},
-              email ? { email } : {}
-            ].filter(condition => Object.keys(condition).length > 0),
-            deletedAt: null
-          },
-          include: {
-            createdByUser: {
-              select: {
-                id: true,
-                userType: true,
-                adminId: true
-              }
-            }
+        // Verificar se o lead já existe (apenas se tiver phone ou email válidos)
+        let existingLead = null;
+        if (phone || email) {
+          const whereConditions = [];
+          if (phone) whereConditions.push({ phone });
+          if (email) whereConditions.push({ email });
+          
+          if (whereConditions.length > 0) {
+            existingLead = await prisma.lead.findFirst({
+               where: {
+                 OR: whereConditions,
+                 deletedAt: null,
+                 tenantId: user.tenantId // Buscar apenas leads do mesmo tenant
+               },
+               include: {
+                 creator: {
+                   select: {
+                     id: true,
+                     userType: true,
+                     adminId: true
+                   }
+                 }
+               }
+             });
           }
-        });
+        }
+        
+        console.log('🔍 [IMPORT] Verificando duplicata para:', { name, phone, email, existingLead: !!existingLead });
+        if (existingLead) {
+          console.log('📋 [IMPORT] Lead existente encontrado:', {
+             id: existingLead.id,
+             name: existingLead.name,
+             phone: existingLead.phone,
+             email: existingLead.email,
+             createdBy: existingLead.creator?.id,
+             userType: existingLead.creator?.userType,
+             adminId: existingLead.creator?.adminId
+           });
+          console.log('👤 [IMPORT] Usuário atual:', {
+            id: user.id,
+            userType: user.userType,
+            adminId: user.adminId
+          });
+        }
 
         if (existingLead) {
-          // Verificar hierarquia para decidir se deve importar ou pular
-          let shouldImport = false;
-          
-          if (user.userType === 'SUPER_ADMIN') {
-            // Super admin pode importar qualquer lead duplicado
-            shouldImport = true;
-          } else if (user.userType === 'ADMIN') {
-            // Admin só pode importar se o lead existente não for do mesmo admin
-            shouldImport = existingLead.createdByUser?.adminId !== user.id && existingLead.createdByUser?.id !== user.id;
-          } else if (user.userType === 'MANAGER') {
-            // Manager pode importar se:
-            // 1. O lead não for do mesmo admin
-            // 2. Ou se for do mesmo admin mas de gerente diferente
-            const existingUserAdminId = existingLead.createdByUser?.adminId || existingLead.createdByUser?.id;
-            const currentUserAdminId = user.adminId;
-            
-            if (existingUserAdminId !== currentUserAdminId) {
-              shouldImport = true; // Diferentes admins
-            } else if (existingLead.createdByUser?.id !== user.id) {
-              shouldImport = true; // Mesmo admin, mas gerente diferente
-            }
-          }
-          
-          if (!shouldImport) {
-             console.log('⚠️ [IMPORT] Lead duplicado ignorado (mesma hierarquia):', name || phone || email);
-             skippedCount++;
-             continue;
-           } else {
-             // Adicionar à lista de duplicatas que podem ser importadas
-             duplicatesFound.push({
-               name: name || 'Sem nome',
-               phone: phone || 'Sem telefone',
-               email: email || 'Sem email',
-               existingCreatedBy: existingLead.createdByUser?.id
-             });
-           }
-           
-           console.log('✅ [IMPORT] Lead duplicado será importado (hierarquia diferente):', name || phone || email);
+          // Como agora filtramos por tenantId, qualquer lead encontrado é do mesmo tenant
+          // Portanto, deve ser considerado duplicata e ignorado
+          console.log('⚠️ [IMPORT] Lead duplicado ignorado (mesmo tenant):', name || phone || email);
+          skippedCount++;
+          continue;
         }
 
         // Criar novo lead
@@ -187,6 +186,7 @@ export async function POST(request: NextRequest) {
             columnId: firstColumn.id,
             createdBy: user.id,
             attendantId: defaultAttendantId, // Associar automaticamente ao atendente
+            tenantId: user.tenantId, // Associar ao tenant do usuário
             source: source,
             createdAt: new Date(),
             updatedAt: new Date()
@@ -201,19 +201,6 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('✅ [IMPORT] Importação concluída:', importedCount, 'importados,', skippedCount, 'ignorados');
-
-    // Se há duplicatas que podem ser importadas, retornar para confirmação
-    if (duplicatesFound.length > 0) {
-      return NextResponse.json({
-        success: false,
-        requiresConfirmation: true,
-        message: `Encontrados ${duplicatesFound.length} leads duplicados que podem ser importados`,
-        duplicates: duplicatesFound,
-        imported: importedCount,
-        skipped: skippedCount,
-        total: data.length
-      });
-    }
 
     return NextResponse.json({
       success: true,

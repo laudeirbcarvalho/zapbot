@@ -265,8 +265,22 @@ export default function Dashboard() {
                 {stats.attendantStats.map((attendant) => (
                   <div key={attendant.id} className="bg-gray-700 rounded-lg p-4">
                     <div className="flex items-center">
-                      <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center mr-3">
-                        <UserCheck className="w-4 h-4 text-white" />
+                      <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center mr-3">
+                        {attendant.photoUrl ? (
+                          <img 
+                            src={attendant.photoUrl} 
+                            alt={attendant.name} 
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                              target.nextElementSibling?.classList.remove('hidden');
+                            }}
+                          />
+                        ) : null}
+                        <div className={`w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center font-medium text-white text-sm ${attendant.photoUrl ? 'hidden' : ''}`}>
+                          {attendant.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                        </div>
                       </div>
                       <div>
                         <div className="text-white font-medium">{attendant.name}</div>

@@ -59,6 +59,8 @@ export default function LixeiraPage() {
   const [dataLoading, setDataLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
+  const [selectAll, setSelectAll] = useState(false);
   
   const helpData = getHelpData('lixeira');
 
@@ -198,6 +200,80 @@ export default function LixeiraPage() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedLeads.length === 0) {
+      alert('Nenhum lead selecionado');
+      return;
+    }
+
+    const confirmMessage = `ATENÇÃO: Esta ação é irreversível! Tem certeza que deseja excluir definitivamente ${selectedLeads.length} lead(s) selecionado(s)?`;
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        router.push('/login');
+        return;
+      }
+
+      setDataLoading(true);
+      let successCount = 0;
+      let errorCount = 0;
+
+      // Processar exclusões em lotes para evitar sobrecarga
+      for (const leadId of selectedLeads) {
+        try {
+          const response = await fetch(`/api/leads/trash?id=${leadId}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (response.status === 401) {
+            localStorage.removeItem('authToken');
+            router.push('/login');
+            return;
+          }
+
+          if (response.status === 403) {
+            alert('Apenas administradores podem excluir definitivamente');
+            return;
+          }
+
+          if (response.ok) {
+            successCount++;
+          } else {
+            errorCount++;
+          }
+        } catch (err) {
+          errorCount++;
+        }
+      }
+
+      // Limpar seleções
+      setSelectedLeads([]);
+      setSelectAll(false);
+      
+      // Recarregar dados
+      await fetchTrashLeads();
+      
+      // Mostrar resultado
+      if (errorCount === 0) {
+        alert(`${successCount} lead(s) excluído(s) definitivamente com sucesso!`);
+      } else {
+        alert(`${successCount} lead(s) excluído(s) com sucesso. ${errorCount} erro(s) ocorreram.`);
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Erro ao excluir leads em massa');
+    } finally {
+      setDataLoading(false);
+    }
+  };
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setPagination(prev => ({ ...prev, page: 1 }));
@@ -291,6 +367,38 @@ export default function LixeiraPage() {
           </div>
         </form>
 
+        {/* Ações em massa - apenas para admins */}
+        {isAdmin && leads.length > 0 && (
+          <div className="mb-4 flex items-center gap-4 p-4 bg-gray-800 rounded-lg">
+            <label className="flex items-center gap-2 text-white">
+              <input
+                type="checkbox"
+                checked={selectAll}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setSelectAll(checked);
+                  if (checked) {
+                    setSelectedLeads(leads.map(lead => lead.id));
+                  } else {
+                    setSelectedLeads([]);
+                  }
+                }}
+                className="w-4 h-4 text-red-600 bg-gray-700 border-gray-600 rounded focus:ring-red-500"
+              />
+              Selecionar Tudo ({leads.length} leads)
+            </label>
+            {selectedLeads.length > 0 && (
+              <button
+                onClick={handleBulkDelete}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center gap-2"
+                title={`Excluir definitivamente ${selectedLeads.length} lead(s) selecionado(s)`}
+              >
+                🗑️ Excluir Selecionados ({selectedLeads.length})
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Lista de leads */}
         {leads.length === 0 ? (
           <div className="text-center py-12">
@@ -303,6 +411,24 @@ export default function LixeiraPage() {
               <table className="w-full">
                 <thead className="bg-gray-700">
                   <tr>
+                    {isAdmin && (
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-12">
+                        <input
+                          type="checkbox"
+                          checked={selectAll}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setSelectAll(checked);
+                            if (checked) {
+                              setSelectedLeads(leads.map(lead => lead.id));
+                            } else {
+                              setSelectedLeads([]);
+                            }
+                          }}
+                          className="w-4 h-4 text-red-600 bg-gray-700 border-gray-600 rounded focus:ring-red-500"
+                        />
+                      </th>
+                    )}
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                       Nome
                     </th>
@@ -326,6 +452,24 @@ export default function LixeiraPage() {
                 <tbody className="divide-y divide-gray-600">
                   {leads.map((lead) => (
                     <tr key={lead.id} className="hover:bg-gray-700">
+                      {isAdmin && (
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <input
+                            type="checkbox"
+                            checked={selectedLeads.includes(lead.id)}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              if (checked) {
+                                setSelectedLeads(prev => [...prev, lead.id]);
+                              } else {
+                                setSelectedLeads(prev => prev.filter(id => id !== lead.id));
+                                setSelectAll(false);
+                              }
+                            }}
+                            className="w-4 h-4 text-red-600 bg-gray-700 border-gray-600 rounded focus:ring-red-500"
+                          />
+                        </td>
+                      )}
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-white">{lead.name}</div>
                         {lead.source && (

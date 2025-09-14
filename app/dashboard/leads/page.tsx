@@ -67,6 +67,12 @@ export default function LeadsPage() {
   const [showDuplicatesModal, setShowDuplicatesModal] = useState(false);
   const [duplicatesData, setDuplicatesData] = useState<any>(null);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showImportProgressModal, setShowImportProgressModal] = useState(false);
+  const [importProgressData, setImportProgressData] = useState<any>(null);
+  
+  // Estados para seleção em massa
+  const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
+  const [selectAll, setSelectAll] = useState(false);
   
   const helpData = getHelpData('leads');
   
@@ -278,6 +284,58 @@ export default function LeadsPage() {
     }
   };
 
+  // Exclusão em massa de leads
+  const handleBulkDelete = async () => {
+    if (selectedLeads.length === 0) {
+      alert('Nenhum lead selecionado');
+      return;
+    }
+
+    const confirmMessage = `Tem certeza que deseja mover ${selectedLeads.length} lead(s) selecionado(s) para a lixeira?`;
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      let successCount = 0;
+      let errorCount = 0;
+
+      // Processar exclusões em lotes
+      for (const leadId of selectedLeads) {
+        try {
+          const { authenticatedFetch } = await import('@/app/lib/api-client');
+          await authenticatedFetch(`/api/leads/${leadId}`, {
+            method: 'DELETE',
+          });
+          successCount++;
+        } catch (err) {
+          console.error(`Erro ao excluir lead ${leadId}:`, err);
+          errorCount++;
+        }
+      }
+
+      // Limpar seleções
+      setSelectedLeads([]);
+      setSelectAll(false);
+      
+      // Recarregar dados
+      await fetchLeads();
+      
+      // Mostrar resultado
+      if (errorCount === 0) {
+        alert(`${successCount} lead(s) movido(s) para a lixeira com sucesso!`);
+      } else {
+        alert(`${successCount} lead(s) movido(s) com sucesso. ${errorCount} erro(s) ocorreram.`);
+      }
+    } catch (err) {
+      console.error('Erro na exclusão em massa:', err);
+      setError('Erro ao mover leads para a lixeira. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Abrir modal para adicionar lead
   const openAddModal = () => {
     setModalMode('add');
@@ -349,6 +407,15 @@ export default function LeadsPage() {
       setImportLoading(true);
       console.log('🚀 Iniciando importação do arquivo:', importFile.name);
       
+      // Fechar modal de upload e abrir modal de progresso
+      setShowImportModal(false);
+      setShowImportProgressModal(true);
+      setImportProgressData({
+        fileName: importFile.name,
+        status: 'processing',
+        message: 'Processando arquivo...'
+      });
+      
       const formData = new FormData();
       formData.append('file', importFile);
 
@@ -365,26 +432,29 @@ export default function LeadsPage() {
       if (result.requiresConfirmation) {
         setDuplicatesData(result);
         setShowDuplicatesModal(true);
+        setShowImportProgressModal(false);
         setImportLoading(false);
         return;
       }
       
-      // Mostrar resultado da importação
+      // Atualizar modal de progresso com resultado da importação
       const { imported = 0, skipped = 0, total = 0 } = result;
-      const successMessage = `Importação concluída com sucesso!\n\n` +
-        `📊 Resumo:\n` +
-        `• Total de registros processados: ${total}\n` +
-        `• Leads importados: ${imported}\n` +
-        `• Leads ignorados (duplicados): ${skipped}`;
-      
-      alert(successMessage);
+      setImportProgressData({
+        fileName: importFile.name,
+        status: 'completed',
+        message: 'Importação concluída com sucesso!',
+        results: {
+          total,
+          imported,
+          skipped
+        }
+      });
       
       // Recarregar a lista de leads
       console.log('🔄 Recarregando lista de leads...');
       await fetchLeads();
       
-      // Fechar modal e limpar arquivo
-      setShowImportModal(false);
+      // Limpar arquivo
       setImportFile(null);
       
       console.log('✅ Importação finalizada com sucesso!');
@@ -394,12 +464,18 @@ export default function LeadsPage() {
       
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       
-      alert(`❌ Falha na Importação\n\n` +
-        `Erro: ${errorMessage}\n\n` +
-        `💡 Dicas:\n` +
-        `• Verifique se o arquivo Excel está no formato correto\n` +
-        `• Certifique-se de que as colunas estão na ordem: Nome, Email, Telefone, Origem\n` +
-        `• Tente novamente ou contate o suporte`);
+      // Atualizar modal de progresso com erro
+      setImportProgressData({
+        fileName: importFile.name,
+        status: 'error',
+        message: 'Falha na importação',
+        error: errorMessage,
+        tips: [
+          'Verifique se o arquivo Excel está no formato correto',
+          'Certifique-se de que as colunas estão na ordem: Nome, Email, Telefone, Origem',
+          'Tente novamente ou contate o suporte'
+        ]
+      });
         
     } finally {
       setImportLoading(false);
@@ -461,31 +537,13 @@ export default function LeadsPage() {
     setImportLoading(false);
   };
 
-  // Baixar planilha de exemplo
-  const handleDownloadExample = () => {
-    // Criar dados de exemplo
-    const exampleData = [
-      ['Nome', 'Email', 'Telefone', 'Origem'],
-      ['João Silva', 'joao@email.com', '(11) 99999-9999', 'Site'],
-      ['Maria Santos', 'maria@email.com', '(11) 88888-8888', 'WhatsApp'],
-      ['Pedro Costa', 'pedro@email.com', '(11) 77777-7777', 'Facebook']
-    ];
-
-    // Criar CSV
-    const csvContent = exampleData.map(row => row.join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    
-    if (link.download !== undefined) {
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', 'exemplo-leads.csv');
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
+  // Fechar modal de progresso da importação
+  const handleCloseImportProgress = () => {
+    setShowImportProgressModal(false);
+    setImportProgressData(null);
   };
+
+
 
   // Redireciona para login se não estiver autenticado
   if (status === "unauthenticated") {
@@ -514,13 +572,7 @@ export default function LeadsPage() {
              >
                Importar Excel
              </button>
-             <a
-               href="/api/leads/example"
-               download="exemplo-leads.xlsx"
-               className="px-3 py-2 text-sm rounded-md text-green-600 border border-green-600 hover:bg-green-50 hover:text-green-700 transition-colors"
-             >
-               📥 Baixar Exemplo
-             </a>
+
              <button 
                onClick={openAddModal}
                className="px-4 py-2 rounded-md text-white bg-blue-600 hover:bg-blue-700"
@@ -552,6 +604,49 @@ export default function LeadsPage() {
             {error}
           </div>
         )}
+
+        {/* Ações em massa */}
+        {leads.filter(lead => sourceFilter === 'all' || lead.source === sourceFilter).length > 0 && (
+          <div className="mb-4 flex items-center gap-4 p-4 bg-gray-800 rounded-lg">
+            <label className="flex items-center gap-2 text-white">
+              <input
+                type="checkbox"
+                checked={selectAll}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setSelectAll(checked);
+                  const filteredLeads = leads.filter(lead => sourceFilter === 'all' || lead.source === sourceFilter);
+                  if (checked) {
+                    setSelectedLeads(filteredLeads.map(lead => lead.id));
+                  } else {
+                    setSelectedLeads([]);
+                  }
+                }}
+                className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+              />
+              Selecionar Tudo ({leads.filter(lead => sourceFilter === 'all' || lead.source === sourceFilter).length} leads)
+            </label>
+            {selectedLeads.length > 0 && (
+              <button
+                onClick={handleBulkDelete}
+                disabled={loading}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white rounded-lg transition-colors flex items-center gap-2"
+                title={`Mover ${selectedLeads.length} lead(s) selecionado(s) para a lixeira`}
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Processando...
+                  </>
+                ) : (
+                  <>
+                    🗑️ Mover Selecionados para Lixeira ({selectedLeads.length})
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+        )}
         
         {isLoading ? (
           <div className="text-center py-10">
@@ -563,6 +658,23 @@ export default function LeadsPage() {
             <table className="min-w-full bg-gray-800 rounded-lg overflow-hidden">
               <thead className="bg-gray-700">
                 <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-12">
+                    <input
+                      type="checkbox"
+                      checked={selectAll}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setSelectAll(checked);
+                        const filteredLeads = leads.filter(lead => sourceFilter === 'all' || lead.source === sourceFilter);
+                        if (checked) {
+                          setSelectedLeads(filteredLeads.map(lead => lead.id));
+                        } else {
+                          setSelectedLeads([]);
+                        }
+                      }}
+                      className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+                    />
+                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Nome</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Email</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Telefone</th>
@@ -576,7 +688,7 @@ export default function LeadsPage() {
               <tbody className="divide-y divide-gray-700">
                 {leads.filter(lead => sourceFilter === 'all' || lead.source === sourceFilter).length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-6 py-4 text-center text-gray-400">
+                    <td colSpan={9} className="px-6 py-4 text-center text-gray-400">
                       Nenhum lead encontrado. Adicione um novo lead.
                     </td>
                   </tr>
@@ -595,6 +707,22 @@ export default function LeadsPage() {
                         borderLeft: `4px solid ${borderColor}` 
                       }}
                     >
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <input
+                          type="checkbox"
+                          checked={selectedLeads.includes(lead.id)}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            if (checked) {
+                              setSelectedLeads(prev => [...prev, lead.id]);
+                            } else {
+                              setSelectedLeads(prev => prev.filter(id => id !== lead.id));
+                              setSelectAll(false);
+                            }
+                          }}
+                          className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+                        />
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-200">{lead.name}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-200">{lead.email}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-200">{lead.phone}</td>
@@ -640,31 +768,31 @@ export default function LeadsPage() {
       {/* Modal para confirmar importação de duplicatas */}
       {showDuplicatesModal && duplicatesData && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
-            <h3 className="text-xl font-semibold mb-4 text-red-600">⚠️ Leads Duplicados Encontrados</h3>
+          <div className="bg-gray-800 p-6 rounded-lg shadow-lg max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <h3 className="text-xl font-semibold mb-4 text-red-400">⚠️ Leads Duplicados Encontrados</h3>
             
             <div className="mb-4">
-              <p className="text-gray-700 mb-2">
-                Foram encontrados <strong>{duplicatesData.duplicates?.length || 0} leads duplicados</strong> que podem ser importados 
+              <p className="text-gray-300 mb-2">
+                Foram encontrados <strong className="text-white">{duplicatesData.duplicates?.length || 0} leads duplicados</strong> que podem ser importados 
                 porque pertencem a uma hierarquia diferente.
               </p>
-              <p className="text-sm text-gray-600 mb-4">
+              <p className="text-sm text-gray-400 mb-4">
                 Deseja prosseguir com a importação mesmo assim?
               </p>
             </div>
 
             {/* Lista de duplicatas */}
             <div className="mb-6">
-              <h4 className="font-medium mb-2">Leads que serão duplicados:</h4>
-              <div className="max-h-40 overflow-y-auto border rounded p-2 bg-gray-50">
+              <h4 className="font-medium mb-2 text-white">Leads que serão duplicados:</h4>
+              <div className="max-h-40 overflow-y-auto border border-gray-600 rounded p-2 bg-gray-700">
                 {duplicatesData.duplicates?.map((duplicate: any, index: number) => (
-                  <div key={index} className="py-1 px-2 border-b last:border-b-0 text-sm">
-                    <span className="font-medium">{duplicate.name}</span>
+                  <div key={index} className="py-1 px-2 border-b border-gray-600 last:border-b-0 text-sm">
+                    <span className="font-medium text-white">{duplicate.name}</span>
                     {duplicate.phone !== 'Sem telefone' && (
-                      <span className="text-gray-600 ml-2">📱 {duplicate.phone}</span>
+                      <span className="text-gray-300 ml-2">📱 {duplicate.phone}</span>
                     )}
                     {duplicate.email !== 'Sem email' && (
-                      <span className="text-gray-600 ml-2">✉️ {duplicate.email}</span>
+                      <span className="text-gray-300 ml-2">✉️ {duplicate.email}</span>
                     )}
                   </div>
                 ))}
@@ -672,13 +800,13 @@ export default function LeadsPage() {
             </div>
 
             {/* Resumo atual */}
-            <div className="mb-6 p-3 bg-blue-50 rounded">
-              <h4 className="font-medium mb-2">📊 Resumo da Importação:</h4>
-              <div className="text-sm text-gray-700">
-                <p>• Total de registros: {duplicatesData.total}</p>
-                <p>• Já importados: {duplicatesData.imported}</p>
-                <p>• Ignorados (mesma hierarquia): {duplicatesData.skipped}</p>
-                <p>• Duplicatas que podem ser importadas: {duplicatesData.duplicates?.length || 0}</p>
+            <div className="mb-6 p-3 bg-gray-700 border border-gray-600 rounded">
+              <h4 className="font-medium mb-2 text-blue-400">📊 Resumo da Importação:</h4>
+              <div className="text-sm text-gray-300">
+                <p>• Total de registros: <span className="text-white">{duplicatesData.total}</span></p>
+                <p>• Já importados: <span className="text-green-400">{duplicatesData.imported}</span></p>
+                <p>• Ignorados (mesma hierarquia): <span className="text-yellow-400">{duplicatesData.skipped}</span></p>
+                <p>• Duplicatas que podem ser importadas: <span className="text-orange-400">{duplicatesData.duplicates?.length || 0}</span></p>
               </div>
             </div>
 
@@ -687,14 +815,14 @@ export default function LeadsPage() {
               <button
                 onClick={handleCancelImport}
                 disabled={importLoading}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 hover:border-gray-400 rounded-md"
+                className="px-4 py-2 text-gray-300 hover:text-white border border-gray-600 hover:border-gray-500 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleConfirmImport}
                 disabled={importLoading}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md flex items-center"
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md flex items-center transition-colors"
               >
                 {importLoading ? (
                   <>
@@ -859,13 +987,7 @@ export default function LeadsPage() {
                 <li>• Coluna C: Telefone (obrigatório)</li>
                 <li>• Coluna D: Origem</li>
               </ul>
-              <button
-                type="button"
-                onClick={handleDownloadExample}
-                className="mt-2 px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 rounded-md text-white"
-              >
-                Baixar Planilha de Exemplo
-              </button>
+
             </div>
             
             <div className="flex justify-end gap-2">
@@ -900,6 +1022,82 @@ export default function LeadsPage() {
           moduleName={helpData.moduleName}
           steps={helpData.steps}
         />
+      )}
+
+      {/* Modal de Progresso da Importação */}
+      {showImportProgressModal && importProgressData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 p-6 rounded-lg w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold">
+                {importProgressData.status === 'processing' && '⏳ Importando Leads'}
+                {importProgressData.status === 'completed' && '✅ Importação Concluída'}
+                {importProgressData.status === 'error' && '❌ Erro na Importação'}
+              </h3>
+              {importProgressData.status !== 'processing' && (
+                <button
+                  onClick={handleCloseImportProgress}
+                  className="text-gray-400 hover:text-white"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            
+            <div className="mb-4">
+              <p className="text-sm text-gray-300 mb-2">
+                Arquivo: <span className="text-white">{importProgressData.fileName}</span>
+              </p>
+              
+              {importProgressData.status === 'processing' && (
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
+                  <span className="text-blue-400">{importProgressData.message}</span>
+                </div>
+              )}
+              
+              {importProgressData.status === 'completed' && (
+                <div>
+                  <p className="text-green-400 mb-3">{importProgressData.message}</p>
+                  <div className="bg-gray-700 p-3 rounded-md">
+                    <h4 className="font-medium mb-2 text-blue-400">📊 Resumo da Importação:</h4>
+                    <div className="text-sm text-gray-300 space-y-1">
+                      <p>• Total de registros processados: <span className="text-white">{importProgressData.results.total}</span></p>
+                      <p>• Leads importados: <span className="text-green-400">{importProgressData.results.imported}</span></p>
+                      <p>• Leads ignorados (duplicados): <span className="text-yellow-400">{importProgressData.results.skipped}</span></p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {importProgressData.status === 'error' && (
+                <div>
+                  <p className="text-red-400 mb-2">{importProgressData.message}</p>
+                  <p className="text-sm text-gray-300 mb-3">Erro: {importProgressData.error}</p>
+                  <div className="bg-gray-700 p-3 rounded-md">
+                    <h4 className="font-medium mb-2 text-yellow-400">💡 Dicas:</h4>
+                    <ul className="text-sm text-gray-300 space-y-1">
+                      {importProgressData.tips.map((tip: string, index: number) => (
+                        <li key={index}>• {tip}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {importProgressData.status !== 'processing' && (
+              <div className="flex justify-end">
+                <button
+                  onClick={handleCloseImportProgress}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md"
+                >
+                  Fechar
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

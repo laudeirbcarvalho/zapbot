@@ -20,6 +20,11 @@ export const GET = withAuth(async (request: NextRequest) => {
       deletedAt: { not: null }, // Apenas leads deletados
     };
     
+    // Adicionar filtro por tenantId se o usuário pertencer a um tenant específico
+    if (user.tenantId) {
+      where.tenantId = user.tenantId;
+    }
+    
     // Se for gerente, filtrar apenas leads que ele próprio excluiu
     if (user.type === 'manager') {
       where.deletedBy = user.id; // Apenas leads excluídos pelo próprio gerente

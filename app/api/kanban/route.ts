@@ -19,12 +19,44 @@ export const GET = withAuth(async (request: Request) => {
       deletedAt: null, // Apenas leads não deletados
     };
     
-    // Removido filtro por tenantId - sistema single-tenant
+    // Adicionar filtro por tenantId se o usuário pertencer a um tenant específico
+    if (user.tenantId) {
+      leadsFilter.tenantId = user.tenantId;
+    }
     
-    if (isManager) {
+    if (isAdmin) {
+      // Administrador vê apenas leads criados por ele ou seus gerentes/atendentes
+      const managedUsers = await prisma.user.findMany({
+        where: { adminId: user.id },
+        select: { id: true }
+      });
+      const managedUserIds = managedUsers.map(u => u.id);
+      
+      // Buscar atendentes dos gerentes gerenciados
+      const managedAttendants = await prisma.attendant.findMany({
+        where: { 
+          OR: [
+            { adminId: user.id },
+            { managerId: { in: managedUserIds } }
+          ],
+          tenantId: user.tenantId // Filtrar por tenant
+        },
+        select: { id: true }
+      });
+      const managedAttendantIds = managedAttendants.map(a => a.id);
+      
+      leadsFilter.OR = [
+        { createdBy: user.id }, // Leads criados pelo próprio admin
+        { createdBy: { in: managedUserIds } }, // Leads criados pelos gerentes
+        { attendantId: { in: managedAttendantIds } } // Leads dos atendentes
+      ];
+    } else if (isManager) {
       // Gerente vê apenas leads de seus atendentes
       const attendants = await prisma.attendant.findMany({
-        where: { managerId: user.id },
+        where: { 
+          managerId: user.id,
+          tenantId: user.tenantId // Filtrar por tenant
+        },
         select: { id: true }
       });
       const attendantIds = attendants.map(a => a.id);
@@ -41,7 +73,6 @@ export const GET = withAuth(async (request: Request) => {
       // Atendente vê apenas seus próprios leads
       leadsFilter.attendantId = user.id;
     }
-    // Admin vê todos os leads (sem filtro adicional)
 
     // Definir filtro para colunas
     let columnsFilter: any = {

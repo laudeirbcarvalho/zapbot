@@ -12,8 +12,8 @@ const navigation = [
   { name: "Atendentes", href: "/dashboard/attendants", icon: "👨‍💼", adminOnly: false, superAdminOnly: false },
   { name: "Usuários", href: "/dashboard/usuarios", icon: "👤", adminOnly: true, superAdminOnly: false },
   { name: "Lixeira", href: "/dashboard/lixeira", icon: "🗑️", adminOnly: false, superAdminOnly: false },
-  { name: "Integrações", href: "/dashboard/integracoes", icon: "🔄", adminOnly: true, superAdminOnly: false },
-  { name: "Configurações", href: "/dashboard/configuracoes", icon: "⚙️", adminOnly: true, superAdminOnly: false },
+  { name: "Integrações", href: "/dashboard/integracoes", icon: "🔄", adminOnly: true, superAdminOnly: true },
+  { name: "Configurações", href: "/dashboard/configuracoes", icon: "⚙️", adminOnly: true, superAdminOnly: true },
 ];
 
 export default function Sidebar() {

@@ -18,7 +18,10 @@ export const GET = withAuth(async (request: Request) => {
       isActive: true
     };
     
-    // Removido filtro por tenantId - sistema single-tenant
+    // Adicionar filtro por tenantId se o usuário pertencer a um tenant específico
+    if (user.tenantId) {
+      whereClause.tenantId = user.tenantId;
+    }
     
     // Filtrar baseado no tipo de usuário
     if (user.isSuperAdmin) {
@@ -170,7 +173,10 @@ export const GET = withAuth(async (request: Request) => {
 export const POST = withAuth(async (request: Request) => {
   try {
     const { name, email, password, phone, cpf, positionId, functionId, department, managerId, startTime, endTime, workDays, photoUrl } = await request.json();
-
+    
+    // Obter usuário autenticado do middleware
+    const user = (request as any).user;
+    
     if (!name || !email || !password || !positionId || !functionId || !startTime || !endTime || !workDays) {
       return NextResponse.json(
         { error: "Campos obrigatórios: name, email, password, positionId, functionId, startTime, endTime, workDays" },
@@ -179,6 +185,7 @@ export const POST = withAuth(async (request: Request) => {
     }
 
     console.log('📝 [API] Criando novo atendente:', name, managerId ? `com gerente ${managerId}` : 'sem gerente');
+    console.log('👤 [API] Usuário autenticado:', user.name, 'ID:', user.id, 'Tenant:', user.tenantId);
 
     // Hash da senha
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -195,6 +202,8 @@ export const POST = withAuth(async (request: Request) => {
         functionId,
         departmentId: department,
         managerId: managerId || null,
+        adminId: user.userType === 'ADMIN' ? user.id : user.adminId,
+        tenantId: user.tenantId,
         startTime,
         endTime,
         workDays,

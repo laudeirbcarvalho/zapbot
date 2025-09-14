@@ -168,6 +168,7 @@ model Attendant {
   password     String?
   phone        String?
   cpf          String?     @unique
+  photoUrl     String?
   positionId   String?
   functionId   String?
   departmentId String?
