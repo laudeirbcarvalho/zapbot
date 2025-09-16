@@ -304,7 +304,33 @@ export const POST = withAuth(async (request: NextRequest) => {
       }
     });
 
-    // Administrador criado sem hierarquia de teste
+    // Se for um administrador, criar kanban padrão automaticamente
+    if (userType === 'ADMIN') {
+      console.log('🚀 Criando kanban padrão para administrador:', newUser.name);
+      
+      const kanbanColumns = [
+        { title: 'Novos Leads', position: 1, color: '#3B82F6' },
+        { title: 'Primeiro Contato', position: 2, color: '#8B5CF6' },
+        { title: 'Qualificação', position: 3, color: '#F59E0B' },
+        { title: 'Proposta', position: 4, color: '#EF4444' },
+        { title: 'Negociação', position: 5, color: '#F97316' },
+        { title: 'Fechamento', position: 6, color: '#10B981' },
+        { title: 'Perdidos', position: 7, color: '#6B7280' }
+      ];
+
+      // Verificar se já existem colunas no sistema
+      const existingColumns = await prisma.column.count();
+      if (existingColumns === 0) {
+        for (const col of kanbanColumns) {
+          await prisma.column.create({
+            data: col
+          });
+        }
+        console.log('✅ Kanban padrão criado para administrador:', newUser.name);
+      } else {
+        console.log('ℹ️ Kanban já existe no sistema, reutilizando colunas existentes');
+      }
+    }
 
     return NextResponse.json(newUser, { status: 201 });
   } catch (error) {

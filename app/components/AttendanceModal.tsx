@@ -30,8 +30,53 @@ interface Attendance {
 interface Lead {
   id: string;
   name: string;
-  email?: string;
-  phone?: string;
+  email: string | null;
+  phone: string | null;
+  source: string | null;
+  status: string;
+  notes: string | null;
+  columnId: string;
+  position: number;
+  createdAt: string;
+  updatedAt: string;
+  attendantId?: string;
+  attendant?: {
+    id: string;
+    name: string;
+    email: string;
+    position: string;
+    department?: string;
+    isActive: boolean;
+  };
+  // Campos para Pessoa Física
+  cpf?: string;
+  nomeCompleto?: string;
+  // Campos para Pessoa Jurídica
+  cnpj?: string;
+  razaoSocial?: string;
+  nomeFantasia?: string;
+  // Campos de Endereço
+  tipoEndereco?: string;
+  logradouro?: string;
+  numero?: string;
+  complemento?: string;
+  bairro?: string;
+  cep?: string;
+  municipio?: string;
+  uf?: string;
+  nomeCidadeExterior?: string;
+  codigoPais?: string;
+  // Campos de Contato
+  telefones?: string;
+  emails?: string;
+  websites?: string;
+  // Campos Empresariais
+  dataInicioAtividade?: string;
+  situacaoCadastral?: string;
+  ultimaAtualizacao?: string;
+  matrizFilial?: string;
+  capitalSocial?: number;
+  faixaFaturamento?: string;
 }
 
 interface AttendanceModalProps {

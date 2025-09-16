@@ -90,12 +90,50 @@ export async function POST(request: NextRequest) {
     // Processar cada linha do Excel (forçando importação)
     for (const row of data as any[]) {
       try {
+        // Campos básicos
         const name = row['Nome'] || row['nome'] || row['Name'] || row['name'];
         const phone = row['Telefone'] || row['telefone'] || row['Phone'] || row['phone'];
         const email = row['Email'] || row['email'] || row['E-mail'] || row['e-mail'];
         const source = row['Origem'] || row['origem'] || row['Source'] || row['source'] || 'Excel Import';
+        
+        // Novos campos - Pessoa Física
+        const cpf = row['CPF'] || row['cpf'];
+        const nomeCompleto = row['Nome Completo'] || row['nome_completo'] || row['nomeCompleto'];
+        
+        // Novos campos - Pessoa Jurídica
+        const cnpj = row['CNPJ'] || row['cnpj'];
+        const razaoSocial = row['Razão Social'] || row['razao_social'] || row['razaoSocial'];
+        const nomeFantasia = row['Nome Fantasia'] || row['nome_fantasia'] || row['nomeFantasia'];
+        
+        // Determinar tipo de pessoa
+        const tipoPessoa = cnpj ? 'JURIDICA' : (cpf ? 'FISICA' : 'FISICA');
+        
+        // Campos de endereço
+        const tipoEndereco = row['Tipo de Endereço'] || row['tipo_endereco'] || row['tipoEndereco'] || 'COMERCIAL';
+        const logradouro = row['Logradouro'] || row['logradouro'];
+        const numero = row['Número'] || row['numero'] || row['number'];
+        const complemento = row['Complemento'] || row['complemento'];
+        const bairro = row['Bairro'] || row['bairro'];
+        const cep = row['CEP'] || row['cep'];
+        const municipio = row['Município'] || row['municipio'] || row['cidade'];
+        const uf = row['UF'] || row['uf'] || row['estado'];
+        const nomeCidadeExterior = row['Nome da Cidade no Exterior'] || row['cidade_exterior'];
+        const codigoPais = row['Código do País'] || row['codigo_pais'];
+        
+        // Campos de contato adicionais
+        const telefones = row['Telefones'] || row['telefones'];
+        const emails = row['E-mails'] || row['emails'];
+        const websites = row['Websites'] || row['websites'];
+        
+        // Campos empresariais
+        const dataInicioAtividade = row['Data de Início da Atividade'] || row['data_inicio_atividade'];
+        const situacaoCadastral = row['Situação Cadastral'] || row['situacao_cadastral'];
+        const ultimaAtualizacao = row['Última Atualização'] || row['ultima_atualizacao'];
+        const matrizFilial = row['Matriz ou Filial'] || row['matriz_filial'];
+        const capitalSocial = row['Capital Social (R$)'] || row['capital_social'];
+        const faixaFaturamento = row['Faixa de Faturamento'] || row['faixa_faturamento'];
 
-        if (!name && !phone && !email) {
+        if (!name && !phone && !email && !cpf && !cnpj) {
           skippedCount++;
           continue;
         }
@@ -110,6 +148,37 @@ export async function POST(request: NextRequest) {
             createdBy: user.id,
             attendantId: defaultAttendantId,
             source: source,
+            // Novos campos - Tipo de pessoa
+            tipoPessoa: tipoPessoa,
+            // Campos pessoa física
+            cpf: cpf || null,
+            nomeCompleto: nomeCompleto || null,
+            // Campos pessoa jurídica
+            cnpj: cnpj || null,
+            razaoSocial: razaoSocial || null,
+            nomeFantasia: nomeFantasia || null,
+            // Campos de endereço
+            tipoEndereco: tipoEndereco || null,
+            logradouro: logradouro || null,
+            numero: numero || null,
+            complemento: complemento || null,
+            bairro: bairro || null,
+            cep: cep || null,
+            municipio: municipio || null,
+            uf: uf || null,
+            nomeCidadeExterior: nomeCidadeExterior || null,
+            codigoPais: codigoPais || null,
+            // Campos de contato adicionais
+            telefones: telefones || null,
+            emails: emails || null,
+            websites: websites || null,
+            // Campos empresariais
+            dataInicioAtividade: dataInicioAtividade ? new Date(dataInicioAtividade) : null,
+            situacaoCadastral: situacaoCadastral || null,
+            ultimaAtualizacao: ultimaAtualizacao ? new Date(ultimaAtualizacao) : null,
+            matrizFilial: matrizFilial || null,
+            capitalSocial: capitalSocial ? parseFloat(capitalSocial.toString().replace(/[^0-9.,]/g, '').replace(',', '.')) : null,
+            faixaFaturamento: faixaFaturamento || null,
             createdAt: new Date(),
             updatedAt: new Date()
           }

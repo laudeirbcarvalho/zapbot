@@ -67,6 +67,55 @@ model Lead {
   attendantId String?
   createdBy   String?
   tenantId    String?
+  
+  // Campos para Pessoa Física
+  cpf         String?
+  nomeCompleto String?
+  
+  // Campos para Pessoa Jurídica
+  cnpj        String?
+  razaoSocial String?
+  nomeFantasia String?
+  
+  // Campos de Endereço
+  tipoEndereco String?
+  logradouro  String?
+  numero      String?
+  complemento String?
+  bairro      String?
+  cep         String?
+  municipio   String?
+  uf          String?
+  nomeCidadeExterior String?
+  codigoPais  String?
+  
+  // Campos de Contato
+  telefones   String?  // JSON array de telefones
+  emails      String?  // JSON array de emails
+  websites    String?  // JSON array de websites
+  
+  // Campos Empresariais
+  dataInicioAtividade DateTime?
+  situacaoCadastral   String?
+  ultimaAtualizacao   DateTime?
+  matrizFilial        String?  // "matriz" ou "filial"
+  capitalSocial       Decimal? @db.Decimal(15,2)
+  faixaFaturamento    String?
+  numeroFiliais       Int?
+  naturezaJuridica    String?
+  porte               String?
+  regimeTributario    String?
+  optanteSimples      String?
+  dataOpcaoSimples    DateTime?
+  dataExclusaoSimples DateTime?
+  optanteMEI          String?
+  qualificacaoResponsavel String?
+  situacaoEspecial    String?
+  dataSituacaoEspecial DateTime?
+  cnaeFiscal          String?
+  cnaesSecundarios    String?
+  socios              String?
+  
   attendances Attendance[]
   attendant   Attendant?   @relation("AttendantLeads", fields: [attendantId], references: [id])
   column      Column?      @relation(fields: [columnId], references: [id])
@@ -79,6 +128,8 @@ model Lead {
   @@index([createdBy])
   @@index([deletedAt])
   @@index([tenantId])
+  @@index([cpf])
+  @@index([cnpj])
 }
 
 model Column {

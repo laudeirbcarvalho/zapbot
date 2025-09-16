@@ -114,41 +114,101 @@ export async function POST(request: NextRequest) {
     // Processar cada linha do Excel
     for (const row of data as any[]) {
       try {
+        // Campos básicos
         const name = row['Nome'] || row['nome'] || row['Name'] || row['name'];
         const phone = row['Telefone'] || row['telefone'] || row['Phone'] || row['phone'];
         const email = row['Email'] || row['email'] || row['E-mail'] || row['e-mail'];
         const source = row['Origem'] || row['origem'] || row['Source'] || row['source'] || 'Excel Import';
+        
+        // Novos campos - Pessoa Física
+        const cpf = row['CPF'] || row['cpf'];
+        const nomeCompleto = row['Nome Completo'] || row['nome_completo'] || row['nomeCompleto'];
+        
+        // Novos campos - Pessoa Jurídica
+        const cnpj = row['CNPJ'] || row['cnpj'];
+        const razaoSocial = row['Razão Social'] || row['razao_social'] || row['razaoSocial'];
+        const nomeFantasia = row['Nome Fantasia'] || row['nome_fantasia'] || row['nomeFantasia'];
+        
+        // Determinar tipo de pessoa
+        const tipoPessoa = cnpj ? 'JURIDICA' : (cpf ? 'FISICA' : 'FISICA');
+        
+        // Campos de endereço
+        const tipoEndereco = row['Tipo de Endereço'] || row['tipo_endereco'] || row['tipoEndereco'] || 'COMERCIAL';
+        const logradouro = row['Logradouro'] || row['logradouro'];
+        const numero = row['Número'] || row['numero'] || row['number'];
+        const complemento = row['Complemento'] || row['complemento'];
+        const bairro = row['Bairro'] || row['bairro'];
+        const cep = row['CEP'] || row['cep'];
+        const municipio = row['Município'] || row['municipio'] || row['cidade'];
+        const uf = row['UF'] || row['uf'] || row['estado'];
+        const nomeCidadeExterior = row['Nome da Cidade no Exterior'] || row['cidade_exterior'];
+        const codigoPais = row['Código do País'] || row['codigo_pais'];
+        
+        // Campos de contato adicionais
+        const telefones = row['Telefones'] || row['telefones'];
+        const emails = row['E-mails'] || row['emails'];
+        const websites = row['Websites'] || row['websites'];
+        
+        // Campos empresariais completos
+        const dataInicioAtividade = row['Data de início da atividade'] || row['data_inicio_atividade'];
+        const situacaoCadastral = row['Situação cadastral'] || row['situacao_cadastral'];
+        const ultimaAtualizacao = row['Última atualização'] || row['ultima_atualizacao'];
+        const matrizFilial = row['Matriz ou filial'] || row['matriz_filial'];
+        const capitalSocial = row['Capital Social (R$)'] || row['capital_social'];
+        const faixaFaturamento = row['Faixa de Faturamento'] || row['faixa_faturamento'];
+        const numeroFiliais = row['Número de filiais'] || row['numero_filiais'];
+        const naturezaJuridica = row['Natureza Jurídica'] || row['natureza_juridica'];
+        const porte = row['Porte'] || row['porte'];
+        const regimeTributario = row['Regime Tributário'] || row['regime_tributario'];
+        const optanteSimples = row['Optante pelo Simples'] || row['optante_simples'];
+        const dataOpcaoSimples = row['Data da opção pelo Simples'] || row['data_opcao_simples'];
+        const dataExclusaoSimples = row['Data de exclusão do Simples'] || row['data_exclusao_simples'];
+        const optanteMEI = row['Optante pelo MEI'] || row['optante_mei'];
+        const qualificacaoResponsavel = row['Qualificação do Responsável'] || row['qualificacao_responsavel'];
+        const situacaoEspecial = row['Situação especial'] || row['situacao_especial'];
+        const dataSituacaoEspecial = row['Data da situação especial'] || row['data_situacao_especial'];
+        const cnaeFiscal = row['CNAE fiscal'] || row['cnae_fiscal'];
+        const cnaesSecundarios = row['CNAEs secundários'] || row['cnaes_secundarios'];
+        const socios = row['Socios'] || row['socios'];
 
-        if (!name && !phone && !email) {
+        // Validação mais flexível: aceitar se tiver pelo menos um identificador
+        // Para empresas: CNPJ, razão social, nome fantasia, telefone ou email
+        // Para pessoas: nome, CPF, telefone ou email
+        const hasValidIdentifier = name || phone || email || cpf || cnpj || razaoSocial || nomeFantasia;
+        
+        if (!hasValidIdentifier) {
+          console.log('⚠️ [IMPORT] Linha ignorada - sem identificador válido:', { name, phone, email, cpf, cnpj, razaoSocial, nomeFantasia });
           skippedCount++;
           continue;
         }
 
-        // Verificar se o lead já existe (apenas se tiver phone ou email válidos)
+        // Verificar se o lead já existe - só verificar campos que não estão vazios
         let existingLead = null;
-        if (phone || email) {
-          const whereConditions = [];
-          if (phone) whereConditions.push({ phone });
-          if (email) whereConditions.push({ email });
-          
-          if (whereConditions.length > 0) {
-            existingLead = await prisma.lead.findFirst({
-               where: {
-                 OR: whereConditions,
-                 deletedAt: null,
-                 tenantId: user.tenantId // Buscar apenas leads do mesmo tenant
-               },
-               include: {
-                 creator: {
-                   select: {
-                     id: true,
-                     userType: true,
-                     adminId: true
-                   }
+        const whereConditions = [];
+        
+        // Adicionar condições apenas para campos preenchidos
+        if (phone && phone.trim()) whereConditions.push({ phone: phone.trim() });
+        if (email && email.trim()) whereConditions.push({ email: email.trim() });
+        if (cpf && cpf.trim()) whereConditions.push({ cpf: cpf.trim() });
+        if (cnpj && cnpj.trim()) whereConditions.push({ cnpj: cnpj.trim() });
+        
+        if (whereConditions.length > 0) {
+          existingLead = await prisma.lead.findFirst({
+             where: {
+               OR: whereConditions,
+               deletedAt: null,
+               tenantId: user.tenantId // Buscar apenas leads do mesmo tenant
+             },
+             include: {
+               creator: {
+                 select: {
+                   id: true,
+                   userType: true,
+                   adminId: true
                  }
                }
-             });
-          }
+             }
+           });
         }
         
         console.log('🔍 [IMPORT] Verificando duplicata para:', { name, phone, email, existingLead: !!existingLead });
@@ -178,9 +238,12 @@ export async function POST(request: NextRequest) {
         }
 
         // Criar novo lead
+        // Definir nome apropriado baseado nos dados disponíveis
+        const leadName = name || razaoSocial || nomeFantasia || email || phone || 'Lead Importado';
+        
         await prisma.lead.create({
           data: {
-            name: name || 'Lead Importado',
+            name: leadName,
             phone: phone || null,
             email: email || null,
             columnId: firstColumn.id,
@@ -188,6 +251,51 @@ export async function POST(request: NextRequest) {
             attendantId: defaultAttendantId, // Associar automaticamente ao atendente
             tenantId: user.tenantId, // Associar ao tenant do usuário
             source: source,
+            // Novos campos - Tipo de pessoa
+            tipoPessoa: tipoPessoa,
+            // Campos pessoa física
+            cpf: cpf || null,
+            nomeCompleto: nomeCompleto || null,
+            // Campos pessoa jurídica
+            cnpj: cnpj || null,
+            razaoSocial: razaoSocial || null,
+            nomeFantasia: nomeFantasia || null,
+            // Campos de endereço
+            tipoEndereco: tipoEndereco || null,
+            logradouro: logradouro || null,
+            numero: numero || null,
+            complemento: complemento || null,
+            bairro: bairro || null,
+            cep: cep || null,
+            municipio: municipio || null,
+            uf: uf || null,
+            nomeCidadeExterior: nomeCidadeExterior || null,
+            codigoPais: codigoPais || null,
+            // Campos de contato adicionais
+            telefones: telefones || null,
+            emails: emails || null,
+            websites: websites || null,
+            // Campos empresariais completos
+            dataInicioAtividade: dataInicioAtividade ? new Date(dataInicioAtividade) : null,
+            situacaoCadastral: situacaoCadastral || null,
+            ultimaAtualizacao: ultimaAtualizacao ? new Date(ultimaAtualizacao) : null,
+            matrizFilial: matrizFilial || null,
+            capitalSocial: capitalSocial ? parseFloat(capitalSocial.toString().replace(/[^0-9.,]/g, '').replace(',', '.')) : null,
+            faixaFaturamento: faixaFaturamento || null,
+            numeroFiliais: numeroFiliais ? parseInt(numeroFiliais.toString()) : null,
+            naturezaJuridica: naturezaJuridica || null,
+            porte: porte || null,
+            regimeTributario: regimeTributario || null,
+            optanteSimples: optanteSimples || null,
+            dataOpcaoSimples: dataOpcaoSimples ? new Date(dataOpcaoSimples) : null,
+            dataExclusaoSimples: dataExclusaoSimples ? new Date(dataExclusaoSimples) : null,
+            optanteMEI: optanteMEI || null,
+            qualificacaoResponsavel: qualificacaoResponsavel || null,
+            situacaoEspecial: situacaoEspecial || null,
+            dataSituacaoEspecial: dataSituacaoEspecial ? new Date(dataSituacaoEspecial) : null,
+            cnaeFiscal: cnaeFiscal || null,
+            cnaesSecundarios: cnaesSecundarios || null,
+            socios: socios || null,
             createdAt: new Date(),
             updatedAt: new Date()
           }

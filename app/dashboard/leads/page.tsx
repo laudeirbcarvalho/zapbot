@@ -29,6 +29,35 @@ interface Lead {
     department?: string;
     isActive: boolean;
   };
+  // Campos para Pessoa Física
+  cpf?: string;
+  nomeCompleto?: string;
+  // Campos para Pessoa Jurídica
+  cnpj?: string;
+  razaoSocial?: string;
+  nomeFantasia?: string;
+  // Campos de Endereço
+  tipoEndereco?: string;
+  logradouro?: string;
+  numero?: string;
+  complemento?: string;
+  bairro?: string;
+  cep?: string;
+  municipio?: string;
+  uf?: string;
+  nomeCidadeExterior?: string;
+  codigoPais?: string;
+  // Campos de Contato
+  telefones?: string;
+  emails?: string;
+  websites?: string;
+  // Campos Empresariais
+  dataInicioAtividade?: string;
+  situacaoCadastral?: string;
+  ultimaAtualizacao?: string;
+  matrizFilial?: string;
+  capitalSocial?: number;
+  faixaFaturamento?: string;
 }
 
 interface Column {
@@ -396,6 +425,119 @@ export default function LeadsPage() {
     }
   };
 
+  // Função para download da planilha exemplo
+  const handleDownloadTemplate = () => {
+    // Criar dados de exemplo para a planilha no novo formato
+    const templateData = [
+      {
+        'Nome': 'REGULAR CONTABILIDADE LTDA',
+        'CPF': '',
+        'CNPJ': '35.931.410/0001-30',
+        'Razão Social': 'REGULAR CONTABILIDADE LTDA',
+        'Nome Fantasia': 'REGULAR ASSESSORIA E CONSULTORIA CONTABIL',
+        'Tipo de endereço': 'RUA',
+        'Logradouro': 'DA BAHIA',
+        'Número': '1148',
+        'Complemento': 'SALA 1812',
+        'Bairro': 'Centro',
+        'CEP': '30160906',
+        'Município': 'Belo Horizonte',
+        'UF': 'MG',
+        'Nome da cidade no exterior': '',
+        'Código do País': '0',
+        'Telefones': '(31) 8786-6249; (31) 2528-3488',
+        'E-mails': 'contato@regularcontabilidade.com.br; contato@regularcontabilidade.com.br',
+        'Websites': 'http://regularcontabilidade.com.br; https://www.instagram.com/regular.contabil',
+        'Data de início da atividade': '08/01/2020',
+        'Situação cadastral': 'Ativa',
+        'Última atualização': '08/01/2020',
+        'Matriz ou filial': 'Matriz',
+        'Capital Social (R$)': 'R$ 2.000,00',
+        'Faixa de Faturamento': 'Até R$360.000,00',
+        'Número de filiais': '0',
+        'Natureza Jurídica': 'Sociedade Simples Limitada',
+        'Porte': 'Microempresa',
+        'Regime Tributário': 'Não Aplicável',
+        'Optante pelo Simples': 'Optante pelo Simples Nacional',
+        'Data da opção pelo Simples': '08/01/2020',
+        'Data de exclusão do Simples': '01/01/1970',
+        'Optante pelo MEI': 'Não Optante ou Excluído do MEI',
+        'Qualificação do Responsável': '',
+        'Situação especial': '',
+        'Data da situação especial': '01/01/1901',
+        'CNAE fiscal': '6920-6/01 - Atividades de contabilidade',
+        'CNAEs secundários': '6920-6/02 - Atividades de consultoria e auditoria contábil e tributária',
+        'Socios': 'PEDRO HENRIQUE DA MATA (Sócio-Administrador desde 2023-10-23)'
+      },
+      {
+        'Nome': 'João Silva',
+        'CPF': '123.456.789-00',
+        'CNPJ': '',
+        'Razão Social': '',
+        'Nome Fantasia': '',
+        'Tipo de endereço': 'RUA',
+        'Logradouro': 'das Flores',
+        'Número': '123',
+        'Complemento': 'Apto 45',
+        'Bairro': 'Centro',
+        'CEP': '01234-567',
+        'Município': 'São Paulo',
+        'UF': 'SP',
+        'Nome da cidade no exterior': '',
+        'Código do País': '0',
+        'Telefones': '(11) 99999-9999',
+        'E-mails': 'joao@email.com',
+        'Websites': '',
+        'Data de início da atividade': '',
+        'Situação cadastral': '',
+        'Última atualização': '',
+        'Matriz ou filial': '',
+        'Capital Social (R$)': '',
+        'Faixa de Faturamento': '',
+        'Número de filiais': '0',
+        'Natureza Jurídica': '',
+        'Porte': '',
+        'Regime Tributário': '',
+        'Optante pelo Simples': '',
+        'Data da opção pelo Simples': '',
+        'Data de exclusão do Simples': '',
+        'Optante pelo MEI': '',
+        'Qualificação do Responsável': '',
+        'Situação especial': '',
+        'Data da situação especial': '',
+        'CNAE fiscal': '',
+        'CNAEs secundários': '',
+        'Socios': ''
+      }
+    ];
+
+    // Converter para CSV
+    const headers = Object.keys(templateData[0]);
+    const csvContent = [
+      headers.join(','),
+      ...templateData.map(row => 
+        headers.map(header => {
+          const value = row[header as keyof typeof row] || '';
+          // Escapar aspas duplas e envolver em aspas se contém vírgula
+          return value.includes(',') || value.includes('"') 
+            ? `"${value.replace(/"/g, '""')}"`
+            : value;
+        }).join(',')
+      )
+    ].join('\n');
+
+    // Criar e baixar arquivo
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'exemplo_importacao_leads.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Manipular importação de Excel
   const handleImportExcel = async () => {
     if (!importFile) {
@@ -565,6 +707,12 @@ export default function LeadsPage() {
              >
                <span>❓</span>
                Ajuda
+             </button>
+             <button
+               onClick={handleDownloadTemplate}
+               className="px-4 py-2 rounded-md text-white bg-blue-600 hover:bg-blue-700"
+             >
+               Baixar Exemplo
              </button>
              <button 
                onClick={() => setShowImportModal(true)}
@@ -980,14 +1128,52 @@ export default function LeadsPage() {
             </div>
             
             <div className="mb-4 p-3 bg-gray-700 rounded-md">
-              <p className="text-sm text-gray-300 mb-2">Formato esperado do Excel:</p>
-              <ul className="text-xs text-gray-400 space-y-1">
-                <li>• Coluna A: Nome (obrigatório)</li>
-                <li>• Coluna B: Email (obrigatório)</li>
-                <li>• Coluna C: Telefone (obrigatório)</li>
-                <li>• Coluna D: Origem</li>
-              </ul>
-
+              <p className="text-sm text-gray-300 mb-2">📋 Formato esperado da planilha (Dados Empresariais Completos):</p>
+              <div className="text-xs text-gray-400 space-y-1 max-h-48 overflow-y-auto">
+                <p className="text-blue-400 font-medium mb-2">Campos Principais:</p>
+                <div className="ml-2 space-y-1">
+                  <p>• Nome, CPF, CNPJ, Razão Social, Nome Fantasia</p>
+                </div>
+                
+                <p className="text-green-400 font-medium mt-3 mb-2">Endereço Completo:</p>
+                <div className="ml-2 space-y-1">
+                  <p>• Tipo de endereço, Logradouro, Número, Complemento</p>
+                  <p>• Bairro, CEP, Município, UF</p>
+                  <p>• Nome da cidade no exterior, Código do País</p>
+                </div>
+                
+                <p className="text-purple-400 font-medium mt-3 mb-2">Contatos:</p>
+                <div className="ml-2 space-y-1">
+                  <p>• Telefones, E-mails, Websites</p>
+                </div>
+                
+                <p className="text-yellow-400 font-medium mt-3 mb-2">Dados Empresariais:</p>
+                <div className="ml-2 space-y-1">
+                  <p>• Data de início da atividade, Situação cadastral</p>
+                  <p>• Última atualização, Matriz ou filial</p>
+                  <p>• Capital Social (R$), Faixa de Faturamento</p>
+                  <p>• Número de filiais, Natureza Jurídica, Porte</p>
+                </div>
+                
+                <p className="text-cyan-400 font-medium mt-3 mb-2">Regime Tributário:</p>
+                <div className="ml-2 space-y-1">
+                  <p>• Regime Tributário, Optante pelo Simples</p>
+                  <p>• Data da opção pelo Simples, Data de exclusão do Simples</p>
+                  <p>• Optante pelo MEI, Qualificação do Responsável</p>
+                </div>
+                
+                <p className="text-orange-400 font-medium mt-3 mb-2">Atividades e Sócios:</p>
+                <div className="ml-2 space-y-1">
+                  <p>• Situação especial, Data da situação especial</p>
+                  <p>• CNAE fiscal, CNAEs secundários, Sócios</p>
+                </div>
+              </div>
+              
+              <div className="mt-3 p-2 bg-blue-900 bg-opacity-30 rounded border border-blue-600">
+                <p className="text-xs text-blue-300">
+                  💡 <strong>Dica:</strong> Use o botão "Baixar Exemplo" para obter uma planilha com todos os campos no formato correto e dados de exemplo da Receita Federal.
+                </p>
+              </div>
             </div>
             
             <div className="flex justify-end gap-2">
@@ -1059,13 +1245,49 @@ export default function LeadsPage() {
               {importProgressData.status === 'completed' && (
                 <div>
                   <p className="text-green-400 mb-3">{importProgressData.message}</p>
-                  <div className="bg-gray-700 p-3 rounded-md">
-                    <h4 className="font-medium mb-2 text-blue-400">📊 Resumo da Importação:</h4>
-                    <div className="text-sm text-gray-300 space-y-1">
-                      <p>• Total de registros processados: <span className="text-white">{importProgressData.results.total}</span></p>
-                      <p>• Leads importados: <span className="text-green-400">{importProgressData.results.imported}</span></p>
-                      <p>• Leads ignorados (duplicados): <span className="text-yellow-400">{importProgressData.results.skipped}</span></p>
+                  <div className="bg-gray-700 p-4 rounded-md">
+                    <h4 className="font-medium mb-3 text-blue-400 flex items-center gap-2">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 00-2-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                      Resumo da Importação
+                    </h4>
+                    
+                    <div className="grid grid-cols-3 gap-4 mb-4">
+                      <div className="bg-gray-800 p-3 rounded-lg text-center">
+                        <div className="text-2xl font-bold text-blue-400">{importProgressData.results.total}</div>
+                        <div className="text-xs text-gray-400">Total Processados</div>
+                      </div>
+                      <div className="bg-gray-800 p-3 rounded-lg text-center">
+                        <div className="text-2xl font-bold text-green-400">{importProgressData.results.imported}</div>
+                        <div className="text-xs text-gray-400">Importados</div>
+                      </div>
+                      <div className="bg-gray-800 p-3 rounded-lg text-center">
+                        <div className="text-2xl font-bold text-yellow-400">{importProgressData.results.skipped}</div>
+                        <div className="text-xs text-gray-400">Ignorados</div>
+                      </div>
                     </div>
+                    
+                    <div className="bg-gray-800 p-3 rounded-lg">
+                      <h5 className="font-medium mb-2 text-green-400">✅ Campos Processados:</h5>
+                      <div className="text-xs text-gray-300 grid grid-cols-2 gap-1">
+                        <div>• Dados básicos (Nome, Email, Telefone)</div>
+                        <div>• Informações de origem</div>
+                        <div>• CPF/CNPJ (quando disponível)</div>
+                        <div>• Endereço completo</div>
+                        <div>• Contatos adicionais</div>
+                        <div>• Dados empresariais</div>
+                      </div>
+                    </div>
+                    
+                    {importProgressData.results.skipped > 0 && (
+                      <div className="mt-3 p-3 bg-yellow-900 bg-opacity-30 rounded-lg border border-yellow-600">
+                        <h5 className="font-medium mb-1 text-yellow-400">⚠️ Leads Ignorados:</h5>
+                        <p className="text-xs text-yellow-300">
+                          {importProgressData.results.skipped} leads foram ignorados por serem duplicatas ou terem dados incompletos.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
