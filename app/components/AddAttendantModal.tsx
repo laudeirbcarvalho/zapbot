@@ -20,7 +20,7 @@ export default function AddAttendantModal({ onClose, onSuccess }: AddAttendantMo
     positionId: '',
     functionId: '',
     departmentId: '',
-    managerId: '',
+    managerId: userId || '', // Pré-preencher com o usuário logado
     startTime: '',
     endTime: '',
     workDays: [] as string[],
@@ -128,6 +128,7 @@ export default function AddAttendantModal({ onClose, onSuccess }: AddAttendantMo
               managersList = [currentAdminData, ...managersList];
             }
             
+            // Garantir que o managerId seja sempre preenchido
             setFormData(prev => ({ ...prev, managerId: userId }));
           }
           
@@ -239,7 +240,9 @@ export default function AddAttendantModal({ onClose, onSuccess }: AddAttendantMo
         body: JSON.stringify({
           ...formData,
           photoUrl,
-          workDays: formData.workDays.join(',')
+          workDays: formData.workDays.join(','),
+          // Garantir que o managerId seja sempre enviado
+          managerId: formData.managerId || userId || null
         })
       });
 
@@ -643,6 +646,12 @@ export default function AddAttendantModal({ onClose, onSuccess }: AddAttendantMo
                     </option>
                   ))}
                 </select>
+                {/* Campo oculto para garantir que o managerId seja sempre enviado */}
+                <input 
+                  type="hidden" 
+                  name="managerId" 
+                  value={formData.managerId || userId || ''} 
+                />
               </div>
             </div>
 

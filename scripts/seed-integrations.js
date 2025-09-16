@@ -95,4 +95,13 @@ async function seedIntegrations() {
   }
 }
 
-seedIntegrations();
+// Executar se chamado diretamente
+if (require.main === module) {
+  seedIntegrations()
+    .catch((error) => {
+      console.error(error);
+      process.exit(1);
+    });
+}
+
+module.exports = { seedIntegrations };
