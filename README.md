@@ -8,115 +8,97 @@ Um sistema completo de gerenciamento de leads com interface Kanban intuitiva, de
 - 🔄 **Sincronização Dinâmica**: Atualizações automáticas entre componentes
 - 📝 **Formulário de Leads**: Cadastro e edição de leads com validação
 - 🎨 **Interface Moderna**: Design responsivo e intuitivo
-- 🐳 **Docker Ready**: Containerização completa para fácil deploy
+- 🚀 **Fácil Instalação**: Configuração simples e rápida
 - 🔧 **TypeScript**: Tipagem forte para maior confiabilidade
 
 ## 🚀 Instalação Rápida
 
-### Pré-requisitos
+## 🛠️ Pré-requisitos
 
-- [Docker](https://docs.docker.com/get-docker/) (recomendado)
-- [Docker Compose](https://docs.docker.com/compose/install/)
-- Ou [Node.js 18+](https://nodejs.org/) para instalação manual
+- [Node.js](https://nodejs.org/) (versão 18 ou superior)
+- [PostgreSQL](https://www.postgresql.org/) (versão 12 ou superior)
+- [Git](https://git-scm.com/)
 
-### 🐳 Instalação com Docker (Recomendado)
+## 🚀 Instalação
 
-#### Windows
+### Windows
+
 ```powershell
 # Clone o repositório
-git clone https://github.com/laudeirbcarvalho/zapbot.git
-cd zapbot
-
-# Execute o script de instalação
-.\install.ps1
-```
-
-#### Linux/macOS
-```bash
-# Clone o repositório
-git clone https://github.com/laudeirbcarvalho/zapbot.git
-cd zapbot
-
-# Torne o script executável e execute
-chmod +x install.sh
-./install.sh
-```
-
-#### Instalação Manual com Docker
-```bash
-# Clone o repositório
-git clone https://github.com/laudeirbcarvalho/zapbot.git
-cd zapbot
-
-# Copie o arquivo de ambiente
-cp .env.example .env
-
-# Build e execute
-docker-compose up -d
-```
-
-### 📦 Instalação Manual (sem Docker)
-
-```bash
-# Clone o repositório
-git clone https://github.com/laudeirbcarvalho/zapbot.git
+git clone https://github.com/seu-usuario/zapbot.git
 cd zapbot
 
 # Instale as dependências
 npm install
 
-# Configure o ambiente
+# Configure o banco de dados PostgreSQL
+# Crie um banco chamado 'zapbot'
+
+# Configure as variáveis de ambiente
 cp .env.example .env
+# Edite o arquivo .env com suas configurações
 
-# Execute em modo de desenvolvimento
+# Execute as migrações
+npx prisma generate
+npx prisma migrate deploy
+
+# Inicie a aplicação
 npm run dev
-
-# Ou build para produção
-npm run build
-npm start
 ```
+
+### Linux/macOS
+
+```bash
+# Clone o repositório
+git clone https://github.com/seu-usuario/zapbot.git
+cd zapbot
+
+# Instale as dependências
+npm install
+
+# Configure o banco de dados PostgreSQL
+# Crie um banco chamado 'zapbot'
+
+# Configure as variáveis de ambiente
+cp .env.example .env
+# Edite o arquivo .env com suas configurações
+
+# Execute as migrações
+npx prisma generate
+npx prisma migrate deploy
+
+# Inicie a aplicação
+npm run dev
+```
+
+Acesse: http://localhost:3000
 
 ## 🔧 Configuração
 
 ### Arquivo .env
 
-O arquivo `.env` na raiz do projeto contém todas as configurações necessárias. **Este é o único arquivo que precisa ser configurado para o funcionamento completo da aplicação.**
+O arquivo `.env` na raiz do projeto contém todas as configurações necessárias:
 
 ```env
-# ===========================================
-# CONFIGURAÇÕES DO BANCO DE DADOS MYSQL
-# ===========================================
-# URL completa de conexão com o banco MySQL
-DATABASE_URL="mysql://usuario:senha@host:porta/nome_do_banco"
+# Configuração do Banco de Dados PostgreSQL
+DATABASE_URL="postgresql://postgres:sua_senha@localhost:5432/zapbot?schema=public"
 
-# Configurações individuais do banco (usadas como backup)
-DB_HOST="seu_host_mysql"          # Ex: localhost, 31.97.83.151
-DB_PORT="3306"                     # Porta padrão do MySQL
-DB_USER="seu_usuario"             # Usuário do banco
-DB_PASS="sua_senha"               # Senha do banco
-DB_NAME="nome_do_banco"           # Nome do banco de dados
+# Configuração JWT
+JWT_SECRET="seu_jwt_secret_muito_seguro_aqui"
+NEXTAUTH_SECRET="seu_nextauth_secret_muito_seguro_aqui"
+NEXTAUTH_URL="http://localhost:3000"
 
-# ===========================================
-# CONFIGURAÇÕES DE AUTENTICAÇÃO (NextAuth)
-# ===========================================
-NEXTAUTH_URL="http://localhost:3000"  # URL da aplicação
-NEXTAUTH_SECRET="sua_chave_secreta"   # Chave secreta para JWT
+# Configuração da Aplicação
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
 
-# ===========================================
-# CONFIGURAÇÕES DE EMAIL (Recuperação de Senha)
-# ===========================================
-# Configurações do servidor SMTP
-EMAIL_SERVER_HOST="smtp.gmail.com"    # Servidor SMTP
-EMAIL_SERVER_PORT="587"               # Porta SMTP (587 para TLS)
-EMAIL_SERVER_USER="seu_email@gmail.com"  # Email remetente
-EMAIL_SERVER_PASSWORD="sua_senha_app"    # Senha do app (Gmail)
-EMAIL_FROM="seu_email@gmail.com"         # Email de origem
+# Configuração de Upload
+UPLOAD_DIR="./public/uploads"
 
-# ===========================================
-# CONFIGURAÇÕES DA APLICAÇÃO
-# ===========================================
-NODE_ENV="production"
-PORT="3000"
+# Configuração de Email (opcional)
+SMTP_HOST="seu_smtp_host"
+SMTP_PORT="587"
+SMTP_USER="seu_email"
+SMTP_PASS="sua_senha_email"
 ```
 
 ### 📧 Configuração de Email (Gmail)
@@ -139,27 +121,24 @@ EMAIL_SERVER_PASSWORD="abcd efgh ijkl mnop"  # Senha de app de 16 dígitos
 EMAIL_FROM="seuemail@gmail.com"
 ```
 
-### 🗄️ Configuração do Banco MySQL
+### 🗄️ Configuração do Banco PostgreSQL
 
 **Exemplo de configuração completa:**
 
 ```env
 # Para banco local
-DATABASE_URL="mysql://root:minhasenha@localhost:3306/zapbot"
-DB_HOST="localhost"
-DB_USER="root"
-DB_PASS="minhasenha"
-DB_NAME="zapbot"
+DATABASE_URL="postgresql://postgres:minhasenha@localhost:5432/zapbot?schema=public"
 
 # Para banco remoto
-DATABASE_URL="mysql://usuario:senha123@31.97.83.151:3306/meubanc"
-DB_HOST="31.97.83.151"
-DB_USER="usuario"
-DB_PASS="senha123"
-DB_NAME="meubanco"
+DATABASE_URL="postgresql://usuario:senha123@servidor.com:5432/zapbot?schema=public"
 ```
 
-**⚠️ Importante:** Após alterar as configurações do banco de dados, reinicie a aplicação para que as mudanças tenham efeito.
+**⚠️ Importante:** Após alterar as configurações do banco de dados, execute as migrações:
+
+```bash
+npx prisma generate
+npx prisma migrate deploy
+```
 
 ## 🎯 Como Usar
 
@@ -175,41 +154,20 @@ DB_NAME="meubanco"
 zapbot/
 ├── app/                    # Código da aplicação Next.js 14
 │   ├── api/               # Rotas da API
-│   │   ├── columns/       # Gerenciamento de colunas
-│   │   ├── leads/         # Gerenciamento de leads
-│   │   └── health/        # Health check
+│   │   ├── auth/          # Autenticação
+│   │   ├── users/         # Gerenciamento de usuários
+│   │   ├── attendants/    # Gerenciamento de atendentes
+│   │   └── leads/         # Gerenciamento de leads
 │   ├── dashboard/         # Páginas do dashboard
-│   │   ├── kanban/        # Interface Kanban
-│   │   └── leads/         # Formulário de leads
-│   ├── hooks/             # Hooks personalizados
-│   └── components/        # Componentes reutilizáveis
-├── public/                # Arquivos estáticos
-├── docker-compose.yml     # Orquestração Docker
-├── Dockerfile            # Imagem de produção
-├── Dockerfile.dev        # Imagem de desenvolvimento
-└── install.sh/.ps1       # Scripts de instalação
-```
-
-## 🐳 Comandos Docker
-
-```bash
-# Iniciar aplicação
-docker-compose up -d
-
-# Parar aplicação
-docker-compose down
-
-# Ver logs
-docker-compose logs -f
-
-# Rebuild completo
-docker-compose build --no-cache
-
-# Status dos containers
-docker-compose ps
-
-# Modo desenvolvimento
-docker-compose --profile dev up -d
+│   │   ├── usuarios/      # Gerenciamento de usuários
+│   │   ├── atendentes/    # Gerenciamento de atendentes
+│   │   ├── leads/         # Gerenciamento de leads
+│   │   └── documentos/    # Documentação do sistema
+│   ├── components/        # Componentes reutilizáveis
+│   └── lib/              # Utilitários e configurações
+├── prisma/               # Schema e migrações do banco
+├── public/               # Arquivos estáticos
+└── scripts/              # Scripts de configuração
 ```
 
 ## 🛠️ Desenvolvimento
@@ -231,10 +189,25 @@ npm run lint
 npm run lint:fix
 ```
 
+### Comandos do Prisma
+```bash
+# Gerar cliente Prisma
+npx prisma generate
+
+# Executar migrações
+npx prisma migrate deploy
+
+# Visualizar banco de dados
+npx prisma studio
+
+# Reset do banco (desenvolvimento)
+npx prisma migrate reset
+```
+
 ## 📊 Monitoramento
 
 - **Health Check**: http://localhost:3000/api/health
-- **Logs**: `docker-compose logs -f zapbot`
+- **Prisma Studio**: http://localhost:5555 (quando executado)
 
 ## 🔄 Atualizações
 
@@ -242,10 +215,14 @@ npm run lint:fix
 # Puxar atualizações
 git pull origin main
 
-# Rebuild e restart
-docker-compose down
-docker-compose build --no-cache
-docker-compose up -d
+# Instalar novas dependências
+npm install
+
+# Executar migrações
+npx prisma migrate deploy
+
+# Reiniciar aplicação
+npm run dev
 ```
 
 ## 🤝 Contribuição
@@ -264,47 +241,10 @@ Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para ma
 
 Se você encontrar algum problema:
 
-1. Verifique os [Issues](https://github.com/laudeirbcarvalho/zapbot/issues) existentes
+1. Verifique os [Issues](https://github.com/seu-usuario/zapbot/issues) existentes
 2. Crie um novo issue com detalhes do problema
 3. Inclua logs e informações do ambiente
 
-## 🚀 Deploy
-
-### Coolify (Recomendado)
-
-O ZapBot está otimizado para deploy no Coolify com configuração automática:
-
-```bash
-# Executar script de preparação
-chmod +x deploy-coolify.sh
-./deploy-coolify.sh
-```
-
-**Arquivos de configuração incluídos:**
-- `COOLIFY_DEPLOY_GUIDE.md` - Guia completo de instalação
-- `coolify.json` - Configuração automática do Coolify
-- `.env.coolify` - Exemplo de variáveis de ambiente
-- `deploy-coolify.sh` - Script de preparação automática
-
-**Passos rápidos:**
-1. Configure as variáveis de ambiente (veja `.env.coolify`)
-2. Crie nova aplicação no Coolify
-3. Conecte o repositório Git
-4. Configure as variáveis no painel
-5. Deploy automático!
-
-📖 **[Guia Completo de Deploy no Coolify](./COOLIFY_DEPLOY_GUIDE.md)**
-
-### Docker Hub
-```bash
-# Build e push para Docker Hub
-docker build -t seu-usuario/zapbot .
-docker push seu-usuario/zapbot
-```
-
-### Vercel/Netlify
-O projeto está pronto para deploy em plataformas como Vercel ou Netlify. Configure as variáveis de ambiente na plataforma escolhida.
-
 ---
 
-**Desenvolvido com ❤️ usando Next.js 14, TypeScript e Docker**
+**Desenvolvido com ❤️ usando Next.js 14, TypeScript e PostgreSQL**

@@ -213,18 +213,7 @@ psql -U postgres zapbot < backup.sql
 npm run dev -- --verbose
 ```
 
-## 🐳 Instalação com Docker (Alternativa)
 
-```bash
-# Clone o repositório
-git clone <URL_DO_REPOSITORIO>
-cd zapbot-1
-
-# Inicie com Docker Compose
-docker-compose up -d
-
-# Acesse: http://localhost:3000
-```
 
 ## 🔧 Solução de Problemas
 
