@@ -8,25 +8,26 @@ datasource db {
 }
 
 model User {
-  id                String       @id @default(uuid())
+  id                String             @id @default(uuid())
   name              String
-  email             String       @unique
+  email             String             @unique
   password          String
-  userType          UserType     @default(MANAGER)
-  isSuperAdmin      Boolean      @default(false)
+  userType          UserType           @default(MANAGER)
+  isSuperAdmin      Boolean            @default(false)
   accountId         String?
   tenantId          String?
   adminId           String?
-  isActive          Boolean      @default(true)
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
+  isActive          Boolean            @default(true)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
   attendances       Attendance[]
-  adminAttendants   Attendant[]  @relation("AdminAttendants")
-  managedAttendants Attendant[]  @relation("ManagerAttendants")
-  createdLeads      Lead[]       @relation("UserCreatedLeads")
-  admin             User?        @relation("AdminManagers", fields: [adminId], references: [id])
-  managedManagers   User[]       @relation("AdminManagers")
-  Tenant            Tenant?      @relation(fields: [tenantId], references: [id])
+  adminAttendants   Attendant[]        @relation("AdminAttendants")
+  managedAttendants Attendant[]        @relation("ManagerAttendants")
+  createdLeads      Lead[]             @relation("UserCreatedLeads")
+  whatsappInstances WhatsAppInstance[] @relation("UserWhatsAppInstances")
+  admin             User?              @relation("AdminManagers", fields: [adminId], references: [id])
+  managedManagers   User[]             @relation("AdminManagers")
+  Tenant            Tenant?            @relation(fields: [tenantId], references: [id])
 
   @@index([adminId])
   @@index([tenantId])
@@ -146,13 +147,24 @@ model Column {
   @@index([deletedAt])
 }
 
-model Integration {
-  id        String   @id @default(uuid())
-  name      String
-  type      String
-  config    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model WhatsAppInstance {
+  id           String   @id @default(uuid())
+  instanceName String   @unique
+  token        String?
+  qrCode       String?
+  status       String   @default("disconnected")
+  webhook      String?
+  isActive     Boolean  @default(true)
+  createdBy    String
+  tenantId     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  creator      User     @relation("UserWhatsAppInstances", fields: [createdBy], references: [id])
+  Tenant       Tenant?  @relation(fields: [tenantId], references: [id])
+
+  @@index([createdBy])
+  @@index([tenantId])
+  @@index([instanceName])
 }
 
 model Attendance {
@@ -269,23 +281,40 @@ model Rating {
 }
 
 model Tenant {
-  id             String           @id
-  name           String
-  slug           String           @unique
-  domain         String?          @unique
-  email          String?
-  password       String?
-  logo           String?
-  isActive       Boolean          @default(true)
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime
-  Attendant      Attendant[]
-  Lead           Lead[]
-  SystemSettings SystemSettings[]
-  User           User[]
+  id               String             @id
+  name             String
+  slug             String             @unique
+  domain           String?            @unique
+  email            String?
+  password         String?
+  logo             String?
+  isActive         Boolean            @default(true)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime
+  Attendant        Attendant[]
+  Lead             Lead[]
+  SystemSettings   SystemSettings[]
+  User             User[]
+  WhatsAppInstance WhatsAppInstance[]
+  integrations     Integration[]
 
   @@index([domain])
   @@index([slug])
+}
+
+model Integration {
+  id        String   @id @default(uuid())
+  name      String
+  type      String
+  config    String   @default("{}")
+  isActive  Boolean  @default(true)
+  tenantId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant    Tenant?  @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([type])
 }
 
 enum UserType {

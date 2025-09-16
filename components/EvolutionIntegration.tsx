@@ -34,8 +34,8 @@ interface EvolutionConfig {
 export default function EvolutionIntegration({ integration, isAdmin, onToggle }: EvolutionIntegrationProps) {
   // Estados para configuração da API Evolution
   const [evolutionConfig, setEvolutionConfig] = useState<EvolutionConfig>({
-    apiUrl: 'https://evolution.bpofinanceiro.shop',
-    apiKey: '8yElBSR7Oldl1UFIgXSUHwpzrqc9c5DaPyGz0a75C9FWQnQnvSMYusI3QaRKB94v',
+    apiUrl: '',
+    apiKey: '',
     isConfigured: false
   });
   const [configLoading, setConfigLoading] = useState(false);
@@ -79,15 +79,43 @@ export default function EvolutionIntegration({ integration, isAdmin, onToggle }:
     setConfigError('');
     setConfigSuccess('');
 
+    // Validar campos obrigatórios
+    if (!evolutionConfig.apiUrl.trim()) {
+      setConfigError('Por favor, insira a URL da API Evolution');
+      setConfigLoading(false);
+      return;
+    }
+
+    if (!evolutionConfig.apiKey.trim()) {
+      setConfigError('Por favor, insira a API Key');
+      setConfigLoading(false);
+      return;
+    }
+
+    // Validar formato da URL
+    try {
+      new URL(evolutionConfig.apiUrl);
+    } catch {
+      setConfigError('URL inválida. Use o formato: https://sua-api.com');
+      setConfigLoading(false);
+      return;
+    }
+
     try {
       // Testar conexão com a API Evolution
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos timeout
+
       const response = await fetch(`${evolutionConfig.apiUrl}/instance/fetchInstances`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
           'apikey': evolutionConfig.apiKey
-        }
+        },
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         setConfigSuccess('Conexão com a API Evolution estabelecida com sucesso!');
@@ -98,12 +126,31 @@ export default function EvolutionIntegration({ integration, isAdmin, onToggle }:
           isConfigured: true
         }));
         loadInstances();
+      } else if (response.status === 401) {
+        setConfigError('API Key inválida. Verifique suas credenciais.');
+      } else if (response.status === 404) {
+        setConfigError('Endpoint não encontrado. Verifique a URL da API.');
+      } else if (response.status >= 500) {
+        setConfigError('Erro no servidor da API Evolution. Tente novamente mais tarde.');
       } else {
-        throw new Error('Falha na conexão com a API Evolution');
+        const errorData = await response.json().catch(() => ({}));
+        setConfigError(errorData.message || `Erro HTTP ${response.status}: ${response.statusText}`);
       }
     } catch (error) {
       console.error('Erro ao testar configuração:', error);
-      setConfigError('Erro ao conectar com a API Evolution. Verifique a URL e API Key.');
+      
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          setConfigError('Timeout na conexão. Verifique se a URL está correta e acessível.');
+        } else if (error.message.includes('fetch')) {
+          setConfigError('Erro de rede. Verifique sua conexão e se a URL está acessível.');
+        } else {
+          setConfigError(`Erro: ${error.message}`);
+        }
+      } else {
+        setConfigError('Erro desconhecido ao conectar com a API Evolution.');
+      }
+      
       setEvolutionConfig(prev => ({ ...prev, isConfigured: false }));
     } finally {
       setConfigLoading(false);
@@ -136,7 +183,7 @@ export default function EvolutionIntegration({ integration, isAdmin, onToggle }:
       });
 
       if (response.ok) {
-        const statusData = await response.json();
+        const statusData = await response.json().catch(() => ({ instance: { state: 'unknown' } }));
         const evolutionStatus = statusData.instance?.state;
         
         // Mapear status da Evolution para status do CRM
@@ -211,7 +258,7 @@ export default function EvolutionIntegration({ integration, isAdmin, onToggle }:
       console.log('📡 Resposta da API:', response.status, response.statusText);
       
       if (response.ok) {
-        const data = await response.json();
+        const data = await response.json().catch(() => ({ instances: [] }));
         console.log('📊 Dados recebidos:', data);
         const instancesList = Array.isArray(data) ? data : (data.instances || []);
         console.log('📋 Instâncias encontradas:', instancesList.length);
@@ -226,7 +273,7 @@ export default function EvolutionIntegration({ integration, isAdmin, onToggle }:
         
         setInstances(updatedInstances);
       } else {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
         console.error('❌ Erro na API:', errorData);
       }
     } catch (error) {
@@ -252,7 +299,7 @@ export default function EvolutionIntegration({ integration, isAdmin, onToggle }:
       });
 
       if (response.ok) {
-        const data = await response.json();
+        const data = await response.json().catch(() => ({ instances: [] }));
         console.log('📊 Instâncias Evolution (raw):', data);
         
         // Processar diferentes formatos de resposta da Evolution API
@@ -311,25 +358,34 @@ export default function EvolutionIntegration({ integration, isAdmin, onToggle }:
     setInstanceSuccess('');
 
     try {
+      console.log('🔄 Criando instância:', instanceForm.instanceName);
+      
+      // Timeout para a requisição
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      
       let response;
       let uniqueInstanceName = instanceForm.instanceName;
       let attempt = 0;
 
       // Gerar nome único se necessário
-      while (attempt < 10) {
+      while (attempt < 5) {
         try {
+          const instanceData = {
+            instanceName: uniqueInstanceName,
+            token: instanceForm.token || `token_${uniqueInstanceName}_${Date.now()}`,
+            qrcode: true,
+            integration: 'WHATSAPP-BAILEYS'
+          };
+
           response = await fetch(`${evolutionConfig.apiUrl}/instance/create`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'apikey': evolutionConfig.apiKey
             },
-            body: JSON.stringify({
-              instanceName: uniqueInstanceName,
-              token: instanceForm.token || undefined,
-              qrcode: true,
-              integration: 'WHATSAPP-BAILEYS'
-            })
+            body: JSON.stringify(instanceData),
+            signal: controller.signal
           });
 
           if (response.ok) {
@@ -337,29 +393,33 @@ export default function EvolutionIntegration({ integration, isAdmin, onToggle }:
           } else if (response.status === 409) {
             // Nome já existe, tentar com timestamp
             attempt++;
-            uniqueInstanceName = `${instanceForm.instanceName}_${Date.now()}`;
+            uniqueInstanceName = `${instanceForm.instanceName}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+            await new Promise(resolve => setTimeout(resolve, 100)); // Pequena pausa
             continue;
           } else {
             // Outro erro, não tentar novamente
             break;
           }
         } catch (error) {
+          if (error instanceof Error && error.name === 'AbortError') {
+            throw error; // Re-throw timeout errors
+          }
           break;
         }
       }
+
+      clearTimeout(timeoutId);
 
       // Gerar token se necessário
       const finalToken = instanceForm.token || `token_${uniqueInstanceName}_${Date.now()}`;
 
       if (response && response.ok) {
-        const data = await response.json();
-        console.log('🔍 Dados retornados pela Evolution API:', data);
+        const data = await response.json().catch(() => ({ instance: null }));
+        console.log('✅ Instância criada na Evolution API:', data);
         
         // Extrair o instanceId real da Evolution API
         const evolutionInstanceId = data.instance?.instanceId || data.instanceId || data.id || uniqueInstanceName;
         console.log('🆔 ID da instância Evolution:', evolutionInstanceId);
-        
-        console.log('✅ Instância criada na Evolution API:', data);
         
         // Criar instância diretamente no banco de dados com status 'created'
         const instanceData = {
@@ -373,73 +433,76 @@ export default function EvolutionIntegration({ integration, isAdmin, onToggle }:
           status: 'created'
         };
         
-        const saveResponse = await fetch('/api/whatsapp-instances', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-          },
-          body: JSON.stringify(instanceData)
-        });
-        
-        if (saveResponse.ok) {
-          const savedInstance = await saveResponse.json();
-          console.log('✅ Instância salva no banco:', savedInstance);
-          
-          setInstanceSuccess(`Instância '${uniqueInstanceName}' criada com sucesso! Clique em "Gerar QR Code" para conectar.`);
-          
-          // Limpar formulário
-          setInstanceForm({
-            instanceName: '',
-            channel: 'BAILEYS',
-            token: '',
-            phoneNumber: ''
-          });
-          
-          // Recarregar lista de instâncias
-          loadInstances();
-        } else {
-          const errorData = await saveResponse.json();
-          console.error('❌ Erro ao salvar instância no banco:', errorData);
-          setInstanceError(`Instância criada na Evolution API, mas erro ao salvar no banco: ${errorData.error}`);
-        }
-
-        // Tentar obter o número do telefone se a instância estiver conectada
         try {
-          // Verificar status da instância usando o instanceName
-          // IMPORTANTE: A Evolution API usa instanceName nos endpoints, não instanceId
-          const statusResponse = await fetch(`${evolutionConfig.apiUrl}/instance/connectionState/${encodeURIComponent(uniqueInstanceName)}`, {
+          const saveResponse = await fetch('/api/whatsapp-instances', {
+            method: 'POST',
             headers: {
-              'apikey': evolutionConfig.apiKey
-            }
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+            },
+            body: JSON.stringify(instanceData)
           });
-
-          if (statusResponse.ok) {
-            const statusData = await statusResponse.json();
-            if (statusData.instance?.state === 'open') {
-              // Obter informações da instância
-              const infoResponse = await fetch(`${evolutionConfig.apiUrl}/instance/fetchInstances`, {
-                headers: {
-                  'apikey': evolutionConfig.apiKey
-                }
-              });
-
-              if (infoResponse.ok) {
-                const infoData = await infoResponse.json();
-                // Atualizar com informações completas se disponível
-              }
-            }
+          
+          if (saveResponse.ok) {
+            const savedInstance = await saveResponse.json();
+            console.log('✅ Instância salva no banco:', savedInstance);
+            
+            setInstanceSuccess(`✅ Instância '${uniqueInstanceName}' criada com sucesso! Agora você pode gerar o QR Code para conectar.`);
+            
+            // Limpar formulário
+            setInstanceForm({
+              instanceName: '',
+              channel: 'BAILEYS',
+              phoneNumber: '',
+              token: ''
+            });
+            
+            // Recarregar lista de instâncias
+            loadInstances();
+            
+            // Aguardar um pouco e sugerir gerar QR Code
+            setTimeout(() => {
+              setInstanceSuccess(prev => prev + ' 📱 Clique em "Gerar QR Code" para conectar seu WhatsApp.');
+            }, 2000);
+            
+          } else {
+            const errorData = await saveResponse.json().catch(() => ({ error: 'Erro desconhecido' }));
+            throw new Error(`Erro ao salvar no banco: ${errorData.error || saveResponse.statusText}`);
           }
-        } catch (error) {
-          console.log('Erro ao verificar número do telefone automaticamente:', error);
+        } catch (saveError) {
+          console.error('❌ Erro ao salvar instância no banco:', saveError);
+          setInstanceError(`Instância criada na Evolution API, mas erro ao salvar localmente: ${saveError.message}`);
         }
+        
       } else {
-        const data = await response?.json();
-        setInstanceError(data.message || 'Erro ao criar instância');
+        const errorData = await response?.json().catch(() => ({ message: 'Erro desconhecido' }));
+        let errorMessage = errorData?.message || `Erro HTTP ${response?.status}: ${response?.statusText}`;
+        
+        if (response?.status === 401 || response?.status === 403) {
+          errorMessage = '🔑 Erro de autenticação: Verifique sua API Key';
+        } else if (response?.status === 409) {
+          errorMessage = '⚠️ Não foi possível criar instância com nome único após várias tentativas';
+        } else if (response?.status >= 500) {
+          errorMessage = '🔧 Erro no servidor da Evolution API: Tente novamente em alguns minutos';
+        }
+        
+        setInstanceError(errorMessage);
+        console.error('❌ Erro da Evolution API:', errorData);
       }
     } catch (error) {
-      console.error('Erro ao criar instância:', error);
-      setInstanceError('Erro de conexão com a API');
+      console.error('❌ Erro ao criar instância:', error);
+      
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          setInstanceError('⏱️ Timeout na conexão: A API demorou muito para responder');
+        } else if (error.message.includes('fetch')) {
+          setInstanceError('🌐 Erro de conexão: Verifique se a URL da API está correta e acessível');
+        } else {
+          setInstanceError(`❌ Erro: ${error.message}`);
+        }
+      } else {
+        setInstanceError('❌ Erro inesperado: Tente novamente ou verifique sua conexão');
+      }
     } finally {
       setInstanceLoading(false);
     }
@@ -459,26 +522,42 @@ export default function EvolutionIntegration({ integration, isAdmin, onToggle }:
     setQrCodeLoading(true);
     setQrCodeError('');
     setQrCodeSuccess('');
+    setErrorType(null);
 
     try {
       console.log('🔄 Gerando QR Code para:', instanceForm.instanceName);
+      
+      // Timeout para a requisição
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 segundos
       
       const response = await fetch(`${evolutionConfig.apiUrl}/instance/connect/${encodeURIComponent(instanceForm.instanceName)}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
           'apikey': evolutionConfig.apiKey
-        }
+        },
+        signal: controller.signal
       });
 
+      clearTimeout(timeoutId);
+
       if (response.ok) {
-        const data = await response.json();
+        const data = await response.json().catch(() => ({ qrcode: null }));
         console.log('📱 Resposta da Evolution API:', data);
         
         let qrCodeData = null;
         
         // Verificar diferentes formatos de resposta da Evolution API
-        if (data.base64) {
+        if (data.pairingCode) {
+          // Evolution API v1 retorna pairingCode para QR Code
+          qrCodeData = data.pairingCode;
+          console.log('📱 Pairing code recebido:', qrCodeData);
+        } else if (data.code) {
+          // Formato alternativo
+          qrCodeData = data.code;
+          console.log('📱 Code recebido:', qrCodeData);
+        } else if (data.base64) {
           qrCodeData = data.base64;
         } else if (data.qrcode && data.qrcode.base64) {
           qrCodeData = data.qrcode.base64;
@@ -489,14 +568,16 @@ export default function EvolutionIntegration({ integration, isAdmin, onToggle }:
         }
         
         if (qrCodeData) {
-          // Garantir que o QR Code tenha o prefixo correto
-          const formattedQRCode = qrCodeData.startsWith('data:image') ? qrCodeData : `data:image/png;base64,${qrCodeData}`;
-          setQrCode(formattedQRCode);
+          // Para QR Code string, usar QRCodeSVG component
+          setQrCode(qrCodeData);
           setQrCodeSuccess('QR Code gerado com sucesso! Escaneie com seu WhatsApp.');
           setConnectionStatus('connecting');
           console.log('✅ QR Code gerado com sucesso');
           
-          // Status será verificado automaticamente pela verificação periódica
+          // Iniciar verificação de status
+          setTimeout(() => {
+            checkConnectionStatus(instanceForm.instanceName);
+          }, 5000);
         } else {
           setQrCodeError('QR Code não disponível. A instância pode já estar conectada ou houve um erro na resposta da API.');
           console.error('❌ QR Code não encontrado na resposta');
@@ -506,18 +587,22 @@ export default function EvolutionIntegration({ integration, isAdmin, onToggle }:
         const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido' }));
         let errorMessage = errorData.message || `Erro HTTP ${response.status}: ${response.statusText}`;
         
-        // Categorizar tipos de erro
+        // Categorizar tipos de erro com mensagens mais claras
         if (response.status === 401 || response.status === 403) {
           setErrorType('config');
           errorMessage = '🔑 Erro de autenticação: Verifique sua API Key';
         } else if (response.status === 404) {
           setErrorType('api');
-          errorMessage = '🔍 Instância não encontrada: Verifique se a instância existe';
+          errorMessage = '🔍 Instância não encontrada: Crie a instância primeiro';
+        } else if (response.status === 409) {
+          setErrorType('api');
+          errorMessage = '⚠️ Instância já está conectada ou em uso';
         } else if (response.status >= 500) {
           setErrorType('api');
           errorMessage = '🔧 Erro no servidor da Evolution API: Tente novamente em alguns minutos';
         } else {
           setErrorType('api');
+          errorMessage = `🚫 Erro da API: ${errorMessage}`;
         }
         
         setQrCodeError(errorMessage);
@@ -525,14 +610,109 @@ export default function EvolutionIntegration({ integration, isAdmin, onToggle }:
       }
     } catch (error) {
       console.error('❌ Erro ao gerar QR Code:', error);
-      setErrorType('network');
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        setQrCodeError('🌐 Erro de conexão: Verifique se a URL da API está correta e acessível');
+      
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          setErrorType('timeout');
+          setQrCodeError('⏱️ Timeout na conexão: A API demorou muito para responder');
+        } else if (error.message.includes('fetch')) {
+          setErrorType('network');
+          setQrCodeError('🌐 Erro de conexão: Verifique se a URL da API está correta e acessível');
+        } else {
+          setErrorType('network');
+          setQrCodeError(`❌ Erro: ${error.message}`);
+        }
       } else {
+        setErrorType('network');
         setQrCodeError('❌ Erro inesperado: Tente novamente ou verifique sua conexão');
       }
     } finally {
       setQrCodeLoading(false);
+    }
+  };
+
+  // Função para verificar status de conexão da instância
+  const checkConnectionStatus = async (instanceName: string) => {
+    if (!evolutionConfig.isConfigured || !instanceName) return;
+
+    try {
+      console.log('🔍 Verificando status da instância:', instanceName);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
+      const response = await fetch(`${evolutionConfig.apiUrl}/instance/fetchInstances`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': evolutionConfig.apiKey
+        },
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        const data = await response.json().catch(() => ({ instances: [] }));
+        console.log('📊 Status das instâncias:', data);
+        
+        // Procurar pela instância específica
+        let instanceData = null;
+        if (Array.isArray(data)) {
+          instanceData = data.find(inst => inst.instance?.instanceName === instanceName);
+        } else if (data.instance && data.instance.instanceName === instanceName) {
+          instanceData = data;
+        }
+        
+        if (instanceData) {
+          const status = instanceData.instance?.state || instanceData.state || 'unknown';
+          console.log(`📱 Status da instância ${instanceName}:`, status);
+          
+          if (status === 'open' || status === 'connected') {
+            setConnectionStatus('connected');
+            setQrCodeSuccess('✅ WhatsApp conectado com sucesso!');
+            setQrCode(''); // Limpar QR Code quando conectado
+            
+            // Salvar instância no banco de dados se ainda não foi salva
+            try {
+              await saveInstanceToDB({
+                instanceName: instanceName,
+                status: 'connected',
+                evolutionApiUrl: evolutionConfig.apiUrl,
+                evolutionApiKey: evolutionConfig.apiKey,
+                connectedAt: new Date().toISOString()
+              });
+              console.log('💾 Instância salva no banco de dados');
+            } catch (saveError) {
+              console.warn('⚠️ Erro ao salvar instância no banco:', saveError);
+            }
+            
+            // Recarregar lista de instâncias
+            loadInstances();
+          } else if (status === 'connecting' || status === 'qrcode') {
+            setConnectionStatus('connecting');
+            // Continuar verificando em 5 segundos
+            setTimeout(() => checkConnectionStatus(instanceName), 5000);
+          } else if (status === 'close' || status === 'disconnected') {
+            setConnectionStatus('disconnected');
+            setQrCodeError('❌ Conexão perdida. Gere um novo QR Code.');
+          }
+        } else {
+          console.log('⚠️ Instância não encontrada na lista');
+          // Tentar novamente em 5 segundos
+          setTimeout(() => checkConnectionStatus(instanceName), 5000);
+        }
+      } else {
+        console.error('❌ Erro ao verificar status:', response.status);
+        // Tentar novamente em 10 segundos em caso de erro
+        setTimeout(() => checkConnectionStatus(instanceName), 10000);
+      }
+    } catch (error) {
+      console.error('❌ Erro ao verificar status de conexão:', error);
+      if (error instanceof Error && error.name !== 'AbortError') {
+        // Tentar novamente em 10 segundos, exceto se foi cancelado
+        setTimeout(() => checkConnectionStatus(instanceName), 10000);
+      }
     }
   };
 
@@ -552,7 +732,7 @@ export default function EvolutionIntegration({ integration, isAdmin, onToggle }:
       });
 
       if (response.ok) {
-        const data = await response.json();
+        const data = await response.json().catch(() => ({ instance: null }));
         return data.instance?.instanceName || instanceData.instanceName;
       } else if (response.status === 409) {
         // Instância já existe, tentar com nome único múltiplas vezes
@@ -590,13 +770,23 @@ export default function EvolutionIntegration({ integration, isAdmin, onToggle }:
           throw new Error('Não foi possível criar uma instância com nome único após múltiplas tentativas');
         }
       } else {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
         throw new Error(`Erro ao salvar instância no banco de dados: ${errorData.error || response.statusText}`);
       }
     } catch (error) {
       console.error('Erro ao salvar instância:', error);
       throw error;
     }
+  };
+
+  // Função para renovar QR Code expirado
+  const refreshQRCode = async () => {
+    setQrCodeExpired(false);
+    setQrCode('');
+    setConnectionStatus('disconnected');
+    setQrCodeError('');
+    setQrCodeSuccess('');
+    await getQRCode();
   };
 
   const deleteInstance = async (instanceId?: string) => {
@@ -658,7 +848,7 @@ export default function EvolutionIntegration({ integration, isAdmin, onToggle }:
         // Recarregar instâncias
         loadInstances();
       } else {
-        const data = await response.json();
+        const data = await response.json().catch(() => ({ message: 'Erro desconhecido' }));
         setInstanceError(data.message || 'Erro ao deletar instância no Evolution API');
       }
     } catch (error) {
@@ -815,7 +1005,7 @@ export default function EvolutionIntegration({ integration, isAdmin, onToggle }:
           });
           
           if (statusResponse.ok) {
-            const statusData = await statusResponse.json();
+            const statusData = await statusResponse.json().catch(() => ({ state: 'unknown' }));
             console.log('🔍 Status da conexão:', statusData);
             
             if (statusData.state === 'open') {
@@ -836,14 +1026,14 @@ export default function EvolutionIntegration({ integration, isAdmin, onToggle }:
               });
               
               if (updateResponse.ok) {
-                const updatedInstance = await updateResponse.json();
+                const updatedInstance = await updateResponse.json().catch(() => ({ id: instance.id }));
                 console.log('✅ Status da instância atualizado:', updatedInstance);
                 setInstanceSuccess(`Instância '${instance.instanceName}' conectada com sucesso!`);
                 
                 // Recarregar instâncias para mostrar o novo status
                 loadInstances();
               } else {
-                const errorData = await updateResponse.json();
+                const errorData = await updateResponse.json().catch(() => ({ error: 'Erro desconhecido' }));
                 console.error('❌ Erro ao atualizar status da instância:', errorData);
                 setInstanceError(`WhatsApp conectado, mas erro ao atualizar status: ${errorData.error || updateResponse.statusText}`);
               }
@@ -961,7 +1151,7 @@ export default function EvolutionIntegration({ integration, isAdmin, onToggle }:
               });
               
               if (retryResponse.ok) {
-                const retryData = await retryResponse.json();
+                const retryData = await retryResponse.json().catch(() => ({ qrcode: null }));
                 console.log('✅ Conexão bem-sucedida após criar instância');
                 
                 // Processar QR Code
@@ -1029,7 +1219,7 @@ export default function EvolutionIntegration({ integration, isAdmin, onToggle }:
       }
  
       // Processar resposta bem-sucedida
-      const data = await response.json();
+      const data = await response.json().catch(() => ({ qrcode: null }));
       console.log('✅ Resposta da Evolution API recebida');
       
       // Processar QR Code e salvar no banco

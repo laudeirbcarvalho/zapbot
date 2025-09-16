@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/lib/auth';
 import jwt from 'jsonwebtoken';
-
-const prisma = new PrismaClient();
 
 // Função auxiliar para verificar autenticação
 async function getAuthenticatedUser(request?: NextRequest) {
