@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  # Banco de dados PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    container_name: zapbot-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-zapbot}
+      POSTGRES_USER: ${POSTGRES_USER:-zapbot}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-zapbot123}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - zapbot-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-zapbot} -d ${POSTGRES_DB:-zapbot}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Aplicação ZapBot
+  zapbot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: zapbot-app
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-zapbot}:${POSTGRES_PASSWORD:-zapbot123}@postgres:5432/${POSTGRES_DB:-zapbot}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-your-secret-key-here}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      # Adicione outras variáveis de ambiente necessárias
+      EVOLUTION_API_URL: ${EVOLUTION_API_URL:-}
+      EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-}
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - zapbot-network
+    volumes:
+      - uploads:/app/public/uploads
+
+  # Redis (opcional, para cache e sessões)
+  redis:
+    image: redis:7-alpine
+    container_name: zapbot-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - zapbot-network
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  uploads:
+    driver: local
+
+networks:
+  zapbot-network:
+    driver: bridge
