@@ -92,9 +92,8 @@ Thumbs.db
 .gitignore
 
 # Docker
-Dockerfile*
-docker-compose*
-.dockerignore
+Dockerfile.dev
+docker-compose.dev.yml
 
 # IDE
 .vscode/
@@ -118,9 +117,6 @@ test/
 tests/
 
 # Documentação
-README.md
-*.md
 docs/
 
 # Arquivos de configuração local
-.env.example
