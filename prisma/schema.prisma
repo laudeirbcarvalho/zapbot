@@ -100,7 +100,7 @@ model Lead {
   situacaoCadastral   String?
   ultimaAtualizacao   DateTime?
   matrizFilial        String?  // "matriz" ou "filial"
-  capitalSocial       Decimal? @db.Decimal(15,2)
+  capitalSocial       Float?
   faixaFaturamento    String?
   numeroFiliais       Int?
   naturezaJuridica    String?
